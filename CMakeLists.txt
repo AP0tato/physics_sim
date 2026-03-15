@@ -26,7 +26,7 @@ if(APPLE)
     endif()
 elseif(WIN32)
     if(EXISTS "${CMAKE_SOURCE_DIR}/SDL/sdl-win64")
-        set(_default_wxwidgets_root "${CMAKE_SOURCE_DIR}/SDL/sdl-win64")
+        set(_default_sdl_root "${CMAKE_SOURCE_DIR}/SDL/sdl-win64")
     endif()
 endif()
 
