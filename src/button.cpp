@@ -1,13 +1,15 @@
 #include "button.hpp"
 
-Button::Button(int x, int y, int w, int h, std::function<void()> &on_click)
-    : Object( std::vector<std::array<float,2>>{{(float)x, (float)y}, {(float)x+w, (float)y}, {(float)x+w, (float)y+h}, {(float)x, (float)y+h}}, RECTANGLE, NONE)
+#include <utility>
+
+Button::Button(int x, int y, int w, int h, std::function<void()> on_click)
+    : Object( std::vector<std::array<float,2>>{{(float)x, (float)y}, {(float)x+w, (float)y}, {(float)x+w, (float)y+h}, {(float)x, (float)y+h}}, HitboxType::RECTANGLE, Orientation::NONE)
 {
     this->x = x;
     this->y = y;
     this->w = w;
     this->h = h;
-    this->on_press = on_click;
+    this->on_press = std::move(on_click);
 }
 
 void Button::draw_object(SDL_Renderer *renderer, Theme *theme)

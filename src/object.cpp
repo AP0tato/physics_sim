@@ -12,7 +12,7 @@ Object::Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbo
 
 void Object::create_hitbox()
 {
-    if(hitbox_type == ELLIPSE)
+    if(hitbox_type == HitboxType::ELLIPSE)
     {
         float c_x = 0, min_x = corners[0][0];
         float c_y = 0, min_y = corners[0][1];
@@ -41,11 +41,11 @@ void Object::create_hitbox()
 
 bool Object::is_mouse_click(int x, int y)
 {
-    if(this->hitbox_type == RECTANGLE)
+    if(this->hitbox_type == HitboxType::RECTANGLE)
     {
         return (x >= hitbox[0][0] && y >= hitbox[0][1] && x <= hitbox[1][0] && y <= hitbox[1][1]);
     }
-    else if(this->hitbox_type == ELLIPSE)
+    else if(this->hitbox_type == HitboxType::ELLIPSE)
     {
         if(hitbox.size() < 2 || hitbox[1][0] == 0 || hitbox[1][1] == 0)
             return false;

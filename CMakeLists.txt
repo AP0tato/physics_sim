@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wall -Wextra -Wpedantic -g)
 
-file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 add_executable(main ${SOURCES})
 
@@ -49,7 +49,7 @@ find_library(SDL3_LIB
 
 target_include_directories(main PRIVATE
     src/inc
-    inc
+    src
     "${SDL_ROOT}/include"
 )
 

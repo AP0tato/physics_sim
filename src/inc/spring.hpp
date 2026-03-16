@@ -13,6 +13,8 @@ class Spring : public Object
     float velocity;
     bool massless;
     void draw_object(SDL_Renderer *renderer, Theme *theme) override;
+
+    ObjectType type() const override { return ObjectType::SPRING; }
 };
 
 #endif

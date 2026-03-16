@@ -7,8 +7,9 @@
 #include "color.hpp"
 #include "themes.hpp"
 
-enum HitboxType { RECTANGLE, ELLIPSE };
-enum Orientation { UP, RIGHT, DOWN, LEFT, NONE };
+enum class HitboxType { RECTANGLE, ELLIPSE };
+enum class Orientation { UP, RIGHT, DOWN, LEFT, NONE };
+enum class ObjectType { SPRING, MASS, BUTTON };
 
 class Object
 {
@@ -24,6 +25,7 @@ class Object
     Orientation orientation;
 
     virtual ~Object() = default;
+    virtual ObjectType type() const = 0;
 };
 
 #endif

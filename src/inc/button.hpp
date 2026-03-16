@@ -8,7 +8,7 @@
 class Button : public Object
 {
     public:
-    Button(int x, int y, int w, int h, std::function<void()> &on_click);
+    Button(int x, int y, int w, int h, std::function<void()> on_click);
     std::function<void()> on_press;
     int x;
     int y;
@@ -16,6 +16,8 @@ class Button : public Object
     int h;
     void press();
     void draw_object(SDL_Renderer *renderer, Theme *theme) override;
+    
+    ObjectType type() const override { return ObjectType::BUTTON; }
 };
 
 #endif
