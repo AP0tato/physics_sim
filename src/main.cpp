@@ -1,15 +1,11 @@
 // Standard C/C++ includes
 #include <iostream>
-#include <unordered_set>
+#include <vector>
 
 // SDL includes
 #include <SDL3/SDL.h>
 
 // User includes
-#include "engine.hpp"
-#include "spring.hpp"
-#include "mass.hpp"
-#include "button.hpp"
 #include "themes.hpp"
 #include "windows/window.hpp"
 #include "windows/main_window.hpp"
@@ -29,7 +25,7 @@ int main(int argc, char const *argv[])
     }
 
     Theme *theme = new Light();
-    theme = new Dark();
+    // theme = new Dark();
 
     std::vector<Window*> windows;
     MainWindow *main_window_ptr = new MainWindow(theme);

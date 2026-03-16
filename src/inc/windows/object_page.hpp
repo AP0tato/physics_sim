@@ -6,7 +6,7 @@
 
 class ObjectPage : public Window
 {
-
+    
 };
 
 #endif

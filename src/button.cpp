@@ -12,10 +12,10 @@ Button::Button(int x, int y, int w, int h, std::function<void()> on_click)
     this->on_press = std::move(on_click);
 }
 
-void Button::draw_object(SDL_Renderer *renderer, Theme *theme)
+void Button::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
 {
     Color *fg = &theme->foreground;
-    SDL_FRect btn = {(float)x, (float)y, (float)w, (float)h };
+    SDL_FRect btn = {(float)this->x, (float)this->y, (float)this->w, (float)this->h };
     SDL_SetRenderDrawColor(renderer, fg->r, fg->g, fg->b, fg->a);
     SDL_RenderFillRect(renderer, &btn);
 }

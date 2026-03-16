@@ -18,8 +18,8 @@ class Object
     std::vector<std::array<float,2>> hitbox;
     std::vector<std::array<float,2>> corners;
     std::vector<std::array<float,2>> base_shape;
-    bool is_mouse_click(int x, int y);
-    virtual void draw_object(SDL_Renderer *renderer, Theme *theme);
+    bool is_mouse_click(int x, int y, int w, int h);
+    virtual void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h);
     void create_hitbox();
     HitboxType hitbox_type;
     Orientation orientation;

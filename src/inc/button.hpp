@@ -15,7 +15,7 @@ class Button : public Object
     int w;
     int h;
     void press();
-    void draw_object(SDL_Renderer *renderer, Theme *theme) override;
+    void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h) override;
     
     ObjectType type() const override { return ObjectType::BUTTON; }
 };

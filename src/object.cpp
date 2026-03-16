@@ -39,34 +39,34 @@ void Object::create_hitbox()
     }
 }
 
-bool Object::is_mouse_click(int x, int y)
+bool Object::is_mouse_click(int x, int y, int w, int h)
 {
     if(this->hitbox_type == HitboxType::RECTANGLE)
     {
-        return (x >= hitbox[0][0] && y >= hitbox[0][1] && x <= hitbox[1][0] && y <= hitbox[1][1]);
+        return (x >= hitbox[0][0]*w && y >= hitbox[0][1]*h && x <= hitbox[1][0]*w && y <= hitbox[1][1]*h);
     }
     else if(this->hitbox_type == HitboxType::ELLIPSE)
     {
         if(hitbox.size() < 2 || hitbox[1][0] == 0 || hitbox[1][1] == 0)
             return false;
         return (
-            ((x - hitbox[0][0]) * (x - hitbox[0][0])) / (hitbox[1][0] * hitbox[1][0]) +
-            ((y - hitbox[0][1]) * (y - hitbox[0][1])) / (hitbox[1][1] * hitbox[1][1])
+            ((x - hitbox[0][0]*w) * (x - hitbox[0][0])*w) / (hitbox[1][0]*w * hitbox[1][0]*w) +
+            ((y - hitbox[0][1]*h) * (y - hitbox[0][1])*h) / (hitbox[1][1]*h * hitbox[1][1]*h)
             <= 1
         );
     }
     return false;
 }
 
-void Object::draw_object(SDL_Renderer *renderer, Theme *theme)
+void Object::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
 {
     const int n = corners.size();
     for(int i = 0; i < n; i++)
     {
-        int x1 = corners[i][0];
-        int y1 = corners[i][1];
-        int x2 = corners[(i+1)%n][0];
-        int y2 = corners[(i+1)%n][1];
+        int x1 = corners[i][0]*w;
+        int y1 = corners[i][1]*h;
+        int x2 = corners[(i+1)%n][0]*w;
+        int y2 = corners[(i+1)%n][1]*h;
 
         draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
     }

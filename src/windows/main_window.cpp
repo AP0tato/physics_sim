@@ -17,10 +17,24 @@ size_t opposite_orientation_index(Orientation orientation)
 }
 }
 
-MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080) { this->theme = theme; }
+MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080) 
+{ 
+    this->theme = theme;
+}
 
 void MainWindow::add_object(Object *object)
 {
+    int w, h;
+    SDL_GetWindowSize(get_window(), &w, &h);
+    for(size_t i = 0; i < object->corners.size(); i++)
+    {
+        object->corners[i][0] /= (float)w;
+        object->corners[i][1] /= (float)h;
+
+        object->base_shape[i][0] /= (float)w;
+        object->base_shape[i][1] /= (float)h;
+    }
+
     switch(object->type())
     {
         case ObjectType::BUTTON:
@@ -41,6 +55,9 @@ void MainWindow::add_object(Object *object)
 
 void MainWindow::event_handler(SDL_Event &event)
 {
+    int w, h;
+    SDL_GetWindowSize(get_window(), &w, &h);
+
     if(event.type == SDL_EVENT_WINDOW_RESIZED)
     {
 
@@ -53,7 +70,7 @@ void MainWindow::event_handler(SDL_Event &event)
     {
         for(size_t i = 0; i < objects.size(); i++)
         {
-            if(springs.count(i) && objects[i]->is_mouse_click(event.button.x, event.button.y))
+            if(springs.count(i) && objects[i]->is_mouse_click(event.button.x, event.button.y, w, h))
             {
                 dragging = true;
                 y_start = event.button.y;
@@ -86,22 +103,22 @@ void MainWindow::event_handler(SDL_Event &event)
             Orientation o = objects[curr_object]->orientation;
             const size_t o_idx = orientation_index(o);
             const size_t next_idx = next_orientation_index(o);
-            int new_y = objects[curr_object]->base_shape[o_idx][1] + d_y;
-            int new_x = objects[curr_object]->base_shape[o_idx][0] + d_x;
+            int new_y = objects[curr_object]->base_shape[o_idx][1]*h + d_y;
+            int new_x = objects[curr_object]->base_shape[o_idx][0]*w + d_x;
 
             if(
-                (o == Orientation::DOWN && new_y > objects[curr_object]->corners[orientation_index(Orientation::UP)][1]) || 
-                (o == Orientation::UP && new_y < objects[curr_object]->corners[orientation_index(Orientation::DOWN)][1])
+                (o == Orientation::DOWN && new_y > objects[curr_object]->corners[orientation_index(Orientation::UP)][1]*h) || 
+                (o == Orientation::UP && new_y < objects[curr_object]->corners[orientation_index(Orientation::DOWN)][1]*h)
             )
             {
-                objects[curr_object]->corners[o_idx][1] = objects[curr_object]->corners[next_idx][1] = new_y;
+                objects[curr_object]->corners[o_idx][1] = objects[curr_object]->corners[next_idx][1] = (float)new_y/h;
             }
             else if(
-                (o == Orientation::RIGHT && new_x > objects[curr_object]->corners[orientation_index(Orientation::LEFT)][0]) ||
-                (o == Orientation::LEFT && new_x < objects[curr_object]->corners[orientation_index(Orientation::RIGHT)][0])
+                (o == Orientation::RIGHT && new_x > objects[curr_object]->corners[orientation_index(Orientation::LEFT)][0]*w) ||
+                (o == Orientation::LEFT && new_x < objects[curr_object]->corners[orientation_index(Orientation::RIGHT)][0]*w)
             )
             {
-                objects[curr_object]->corners[o_idx][0] = objects[curr_object]->corners[next_idx][0] = new_x;
+                objects[curr_object]->corners[o_idx][0] = objects[curr_object]->corners[next_idx][0] = (float)new_x/w;
             }
             
             objects[curr_object]->create_hitbox();
@@ -111,6 +128,8 @@ void MainWindow::event_handler(SDL_Event &event)
 
 void MainWindow::main_loop()
 {
+    int w, h;
+    SDL_GetWindowSize(get_window(), &w, &h);
     
     for(size_t i = 0; i < objects.size(); i++)
     {
@@ -125,13 +144,13 @@ void MainWindow::main_loop()
             float eq, d;
             if(o == Orientation::LEFT || o == Orientation::RIGHT)
             {
-                eq = curr->base_shape[o_idx][0];
-                d = curr->corners[o_idx][0] - eq;
+                eq = curr->base_shape[o_idx][0]*w;
+                d = curr->corners[o_idx][0]*w - eq;
             }
             else
             {
-                eq = G * mass / curr->k_const + curr->base_shape[o_idx][1];
-                d = curr->corners[o_idx][1] - eq;
+                eq = G * mass / curr->k_const + curr->base_shape[o_idx][1]*h;
+                d = curr->corners[o_idx][1]*h - eq;
             }
 
             float a = G - curr->k_const * d / mass;
@@ -142,8 +161,8 @@ void MainWindow::main_loop()
 
             if(o == Orientation::LEFT || o == Orientation::RIGHT)
             {
-                curr->corners[o_idx][0] += displacement;
-                curr->corners[next_idx][0] += displacement;
+                curr->corners[o_idx][0] += (float)displacement/w;
+                curr->corners[next_idx][0] += (float)displacement/w;
 
                 if(
                     (o == Orientation::LEFT && curr->corners[o_idx][0] > curr->corners[opposite_idx][0]) ||
@@ -156,8 +175,8 @@ void MainWindow::main_loop()
             }
             else
             {
-                curr->corners[o_idx][1] += displacement;
-                curr->corners[next_idx][1] += displacement;
+                curr->corners[o_idx][1] += displacement / h;
+                curr->corners[next_idx][1] += displacement / h;
 
                 if(
                     (o == Orientation::DOWN && curr->corners[o_idx][1] < curr->corners[opposite_idx][1]) ||
@@ -171,6 +190,6 @@ void MainWindow::main_loop()
 
             objects[i]->create_hitbox();
         }
-        objects[i]->draw_object(get_renderer(), theme);
+        objects[i]->draw_object(get_renderer(), theme, w, h);
     }
 }

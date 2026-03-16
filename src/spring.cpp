@@ -9,17 +9,17 @@ Spring::Spring(const std::vector<std::array<float,2>> &corners, float k_const, b
     this->velocity = 0;
 }
 
-void Spring::draw_object(SDL_Renderer *renderer, Theme *theme)
+void Spring::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
 {
     Color highlight = {255, 0, 0, 255};
 
     const int n = corners.size();
     for(int i = 0; i < n; i++)
     {
-        int x1 = corners[i][0];
-        int y1 = corners[i][1];
-        int x2 = corners[(i+1)%n][0];
-        int y2 = corners[(i+1)%n][1];
+        int x1 = corners[i][0]*w;
+        int y1 = corners[i][1]*h;
+        int x2 = corners[(i+1)%n][0]*w;
+        int y2 = corners[(i+1)%n][1]*h;
 
         if(i == static_cast<int>(orientation))
             draw_line(renderer, x1, y1, x2, y2, &highlight);
