@@ -9,12 +9,13 @@
 #include "themes.hpp"
 #include "windows/window.hpp"
 #include "windows/main_window.hpp"
+#include "windows/object_page.hpp"
 
 #define SDL_INIT (SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO)
 #define HEIGHT 720
 #define WIDTH 1080
 
-void open_objects_page();
+void open_objects_page(std::vector<Window*> &windows);
 
 int main(int argc, char const *argv[])
 {
@@ -25,7 +26,7 @@ int main(int argc, char const *argv[])
     }
 
     Theme *theme = new Light();
-    // theme = new Dark();
+    theme = new Dark();
 
     std::vector<Window*> windows;
     MainWindow *main_window_ptr = new MainWindow(theme);
@@ -50,6 +51,7 @@ int main(int argc, char const *argv[])
 
     main_window_ptr->add_object(new Spring(spring_shape, 25, false, 0, Orientation::UP));
     main_window_ptr->add_object(new Mass(mass_shape, HitboxType::RECTANGLE, 1));
+    main_window_ptr->add_object(new Button(30, 50, 50, 30, [&windows]() { open_objects_page(windows); }));
 
     SDL_Event event;
     bool running = true;
@@ -68,9 +70,20 @@ int main(int argc, char const *argv[])
                     else
                         windows[i]->destroy();
                 }
-
             }
         }
+        
+        // Remove closed windows from vector
+        for(size_t i = windows.size(); i > 0; i--)
+        {
+            if(i - 1 != main_window && !windows[i-1]->running)
+            {
+                windows.erase(windows.begin() + (i - 1));
+                if(main_window > i - 1)
+                    main_window--;
+            }
+        }
+        
         Color *bg = &theme->background;
         for(Window* window : windows)
         {
@@ -92,7 +105,8 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void open_objects_page()
+void open_objects_page(std::vector<Window*> &windows)
 {
     printf("Button pressed\n");
+    windows.push_back(new ObjectPage());
 }

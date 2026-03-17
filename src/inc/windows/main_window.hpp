@@ -5,6 +5,7 @@
 #include "object.hpp"
 #include "spring.hpp"
 #include "mass.hpp"
+#include "button.hpp"
 #include <vector>
 #include <unordered_set>
 

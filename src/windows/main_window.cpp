@@ -34,6 +34,8 @@ void MainWindow::add_object(Object *object)
         object->base_shape[i][0] /= (float)w;
         object->base_shape[i][1] /= (float)h;
     }
+    
+    object->create_hitbox();
 
     switch(object->type())
     {
@@ -55,16 +57,12 @@ void MainWindow::add_object(Object *object)
 
 void MainWindow::event_handler(SDL_Event &event)
 {
+    Window::event_handler(event);
+    if(!running)
+        return;
+
     int w, h;
     SDL_GetWindowSize(get_window(), &w, &h);
-
-    if(event.type == SDL_EVENT_WINDOW_RESIZED)
-    {
-
-    }
-    
-    if(event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED)
-        running = false;
 
     if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) 
     {
@@ -82,6 +80,11 @@ void MainWindow::event_handler(SDL_Event &event)
                     curr->velocity = 0;
                 }
                 break;
+            }
+            else if(buttons.count(i) && objects[i]->is_mouse_click(event.button.x, event.button.y, w, h))
+            {
+                Button *curr = dynamic_cast<Button*>(objects[i]);
+                curr->press();
             }
         }
     }

@@ -23,7 +23,11 @@ Window::Window(const char* title, const int WIDTH, const int HEIGHT)
 
 void Window::event_handler(SDL_Event &event)
 {
-    (void)event;
+    if(event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED &&
+       event.window.windowID == SDL_GetWindowID(window))
+    {
+        running = false;
+    }
 }
 
 void Window::main_loop() {}
