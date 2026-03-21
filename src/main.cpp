@@ -15,7 +15,7 @@
 #define HEIGHT 720
 #define WIDTH 1080
 
-void open_objects_page(std::vector<Window*> &windows);
+void open_objects_page(std::vector<Window*> &windows, Window *main_window_ptr);
 
 int main(int argc, char const *argv[])
 {
@@ -51,7 +51,7 @@ int main(int argc, char const *argv[])
 
     main_window_ptr->add_object(new Spring(spring_shape, 25, false, 0, Orientation::UP));
     main_window_ptr->add_object(new Mass(mass_shape, HitboxType::RECTANGLE, 1));
-    main_window_ptr->add_object(new Button(30, 50, 50, 30, [&windows]() { open_objects_page(windows); }));
+    main_window_ptr->add_object(new Button(30, 50, 50, 30, [&windows, main_window_ptr]() { open_objects_page(windows, main_window_ptr); }));
 
     SDL_Event event;
     bool running = true;
@@ -105,8 +105,8 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void open_objects_page(std::vector<Window*> &windows)
+void open_objects_page(std::vector<Window*> &windows, Window *main_window_ptr)
 {
     printf("Button pressed\n");
-    windows.push_back(new ObjectPage());
+    windows.push_back(new ObjectPage(main_window_ptr));
 }

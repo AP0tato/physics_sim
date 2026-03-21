@@ -9,6 +9,10 @@ add_compile_options(-Wall -Wextra -Wpedantic -g)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
+if(APPLE)
+    list(APPEND SOURCES src/gpu-compute/metal/handler.mm)
+endif()
+
 add_executable(main ${SOURCES})
 
 set(_default_sdl_root "")
@@ -55,6 +59,47 @@ target_include_directories(main PRIVATE
 
 target_link_libraries(main PRIVATE "${SDL3_LIB}")
 
+if(APPLE)
+    target_link_libraries(main PRIVATE
+        "-framework Metal"
+        "-framework Foundation"
+    )
+
+    find_program(XCRUN_EXECUTABLE xcrun REQUIRED)
+    execute_process(
+        COMMAND "${XCRUN_EXECUTABLE}" -sdk macosx metal -v
+        RESULT_VARIABLE METAL_COMPILER_STATUS
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+
+    if(METAL_COMPILER_STATUS EQUAL 0)
+        set(METAL_SOURCE "${CMAKE_SOURCE_DIR}/src/gpu-compute/metal/functions.metal")
+        set(METAL_AIR "${CMAKE_CURRENT_BINARY_DIR}/functions.air")
+        set(METAL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/functions.metallib")
+
+        add_custom_command(
+            OUTPUT "${METAL_LIBRARY}"
+            COMMAND "${XCRUN_EXECUTABLE}" -sdk macosx metal -c "${METAL_SOURCE}" -o "${METAL_AIR}"
+            COMMAND "${XCRUN_EXECUTABLE}" -sdk macosx metallib "${METAL_AIR}" -o "${METAL_LIBRARY}"
+            DEPENDS "${METAL_SOURCE}"
+            COMMENT "Compiling Metal shaders"
+            VERBATIM
+        )
+
+        add_custom_target(metal_shaders ALL DEPENDS "${METAL_LIBRARY}")
+        add_dependencies(main metal_shaders)
+
+        add_custom_command(TARGET main POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${METAL_LIBRARY}"
+                "$<TARGET_FILE_DIR:main>/functions.metallib"
+        )
+    else()
+        message(WARNING "Metal command-line toolchain is unavailable. Install it with: xcodebuild -downloadComponent MetalToolchain")
+    endif()
+endif()
+
 # On macOS embed rpath so the binary finds the dylib at runtime
 if(APPLE)
     set_target_properties(main PROPERTIES
@@ -65,6 +110,8 @@ endif()
 
 # On Windows, copy SDL3.dll next to the executable after build
 if(WIN32)
+    target_link_libraries(main PRIVATE dxgi)
+
     add_custom_command(TARGET main POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${SDL_ROOT}/bin/SDL3.dll"

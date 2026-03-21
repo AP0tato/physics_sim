@@ -27,9 +27,10 @@ class MainWindow : public Window
     public:
     MainWindow(Theme *theme);
     void add_object(Object *object);
+    Theme *theme;
+
     virtual void main_loop() override;
     virtual void event_handler(SDL_Event &event) override;
-    Theme *theme;
 };
 
 #endif
