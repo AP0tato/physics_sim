@@ -51,6 +51,18 @@ find_library(SDL3_LIB
     REQUIRED
 )
 
+find_library(SDL3_TTF_LIB
+    NAMES SDL3_ttf SDL3_ttf-static
+    PATHS "${SDL_ROOT}/lib"
+    NO_DEFAULT_PATH
+)
+
+find_path(SDL3_TTF_INCLUDE_DIR
+    NAMES SDL3_ttf/SDL_ttf.h SDL_ttf.h
+    PATHS "${SDL_ROOT}/include"
+    NO_DEFAULT_PATH
+)
+
 target_include_directories(main PRIVATE
     src/inc
     src
@@ -58,6 +70,14 @@ target_include_directories(main PRIVATE
 )
 
 target_link_libraries(main PRIVATE "${SDL3_LIB}")
+
+if(SDL3_TTF_LIB AND SDL3_TTF_INCLUDE_DIR)
+    target_link_libraries(main PRIVATE "${SDL3_TTF_LIB}")
+    target_compile_definitions(main PRIVATE PHYSICS_HAS_SDL_TTF=1)
+else()
+    target_compile_definitions(main PRIVATE PHYSICS_HAS_SDL_TTF=0)
+    message(WARNING "SDL3_ttf header/library pair not found under SDL_ROOT. Button text rendering is disabled until SDL_ttf is installed in the same prefix.")
+endif()
 
 if(APPLE)
     target_link_libraries(main PRIVATE

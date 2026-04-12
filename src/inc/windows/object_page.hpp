@@ -7,14 +7,17 @@
 #include "spring.hpp"
 #include "mass.hpp"
 
-#define BTN_WIDTH 50
-#define BTN_HEIGHT 30
+#define BTN_WIDTH 180
+#define BTN_HEIGHT 56
+
+class MainWindow;
 
 class ObjectPage : public Window
 {
     private:
-    Window *ptr_main;
+    MainWindow *ptr_main;
     std::vector<Button*> buttons;
+    void normalize_button(Button *button);
     void create_object(ObjectType type);
     Spring* create_spring();
     Mass* create_mass();

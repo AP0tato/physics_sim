@@ -1,5 +1,7 @@
 #include "spring.hpp"
 
+#include "mass.hpp"
+
 Spring::Spring(const std::vector<std::array<float,2>> &corners, float k_const, bool massless, float mass, Orientation orientation)
     : Object(corners, HitboxType::RECTANGLE, orientation)  // Call parent constructor in initializer list
 {
@@ -7,6 +9,59 @@ Spring::Spring(const std::vector<std::array<float,2>> &corners, float k_const, b
     this->massless = massless;
     this->mass = mass;
     this->velocity = 0;
+}
+
+bool Spring::is_mass_attached(const Mass *mass_obj) const
+{
+    for(const auto &entry : attached_objects)
+    {
+        if(entry.mass == mass_obj)
+            return true;
+    }
+    return false;
+}
+
+void Spring::attach_mass(Mass *mass_obj, const std::array<float,2> &offset)
+{
+    if(!mass_obj)
+        return;
+
+    for(auto &entry : attached_objects)
+    {
+        if(entry.mass == mass_obj)
+        {
+            entry.offset = offset;
+            return;
+        }
+    }
+
+    attached_objects.push_back(AttachedObject{mass_obj, offset});
+}
+
+void Spring::detach_mass(Mass *mass_obj)
+{
+    if(!mass_obj)
+        return;
+
+    for(size_t i = 0; i < attached_objects.size(); ++i)
+    {
+        if(attached_objects[i].mass == mass_obj)
+        {
+            attached_objects.erase(attached_objects.begin() + (long)i);
+            return;
+        }
+    }
+}
+
+float Spring::attached_mass_total() const
+{
+    float total = 0.0f;
+    for(const auto &entry : attached_objects)
+    {
+        if(entry.mass)
+            total += entry.mass->mass;
+    }
+    return total;
 }
 
 void Spring::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)

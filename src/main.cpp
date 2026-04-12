@@ -4,18 +4,27 @@
 
 // SDL includes
 #include <SDL3/SDL.h>
+#if defined(PHYSICS_HAS_SDL_TTF) && __has_include(<SDL3_ttf/SDL_ttf.h>)
+#include <SDL3_ttf/SDL_ttf.h>
+#define PHYSICS_HAS_TTF_HEADER 1
+#elif defined(PHYSICS_HAS_SDL_TTF) && __has_include(<SDL_ttf.h>)
+#include <SDL_ttf.h>
+#define PHYSICS_HAS_TTF_HEADER 1
+#else
+#define PHYSICS_HAS_TTF_HEADER 0
+#endif
 
 // User includes
+#include "app_state.hpp"
 #include "themes.hpp"
 #include "windows/window.hpp"
 #include "windows/main_window.hpp"
-#include "windows/object_page.hpp"
 
 #define SDL_INIT (SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO)
-#define HEIGHT 720
-#define WIDTH 1080
 
-void open_objects_page(std::vector<Window*> &windows, Window *main_window_ptr);
+std::vector<Window*> windows;
+
+void open_objects_page(Window *main_window_ptr);
 
 int main(int argc, char const *argv[])
 {
@@ -25,33 +34,21 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
+#if defined(PHYSICS_HAS_SDL_TTF) && PHYSICS_HAS_TTF_HEADER
+    if(!TTF_Init())
+    {
+        std::cout << "Error initializing SDL_ttf: " << SDL_GetError() << "\n";
+        SDL_Quit();
+        return 1;
+    }
+#endif
+
     Theme *theme = new Light();
     theme = new Dark();
 
-    std::vector<Window*> windows;
     MainWindow *main_window_ptr = new MainWindow(theme);
     windows.push_back(main_window_ptr);
     size_t main_window = windows.size() - 1;
-
-    float width = 30;
-    float height = 30;
-
-    std::vector<std::array<float,2>> spring_shape = {
-        {(float)(WIDTH/2), (float)(HEIGHT/2)},
-        {(float)(WIDTH/2+width), (float)(HEIGHT/2)},
-        {(float)(WIDTH/2+width), (float)(HEIGHT/2+height)},
-        {(float)(WIDTH/2), (float)(HEIGHT/2+height)}
-    },
-    mass_shape = {
-        {5, 5},
-        {5 + width, 5},
-        {5 + width, 5 + height},
-        {5, 5 + height}
-    };
-
-    main_window_ptr->add_object(new Spring(spring_shape, 25, false, 0, Orientation::UP));
-    main_window_ptr->add_object(new Mass(mass_shape, HitboxType::RECTANGLE, 1));
-    main_window_ptr->add_object(new Button(30, 50, 50, 30, [&windows, main_window_ptr]() { open_objects_page(windows, main_window_ptr); }));
 
     SDL_Event event;
     bool running = true;
@@ -67,22 +64,26 @@ int main(int argc, char const *argv[])
                 {
                     if(i == main_window)
                         running = false;
-                    else
-                        windows[i]->destroy();
                 }
             }
         }
         
-        // Remove closed windows from vector
+        // Remove closed child windows, then focus main window if any were closed.
+        bool closed_child_window = false;
         for(size_t i = windows.size(); i > 0; i--)
         {
             if(i - 1 != main_window && !windows[i-1]->running)
             {
+                windows[i-1]->destroy();
                 windows.erase(windows.begin() + (i - 1));
+                closed_child_window = true;
                 if(main_window > i - 1)
                     main_window--;
             }
         }
+
+        if(closed_child_window && main_window < windows.size())
+            SDL_RaiseWindow(windows[main_window]->get_window());
         
         Color *bg = &theme->background;
         for(Window* window : windows)
@@ -98,15 +99,12 @@ int main(int argc, char const *argv[])
     for(Window* window : windows)
         window->destroy();
 
+#if defined(PHYSICS_HAS_SDL_TTF) && PHYSICS_HAS_TTF_HEADER
+    TTF_Quit();
+#endif
     SDL_Quit();
 
     std::cout << "Quitting...\n";
 
     return 0;
-}
-
-void open_objects_page(std::vector<Window*> &windows, Window *main_window_ptr)
-{
-    printf("Button pressed\n");
-    windows.push_back(new ObjectPage(main_window_ptr));
 }
