@@ -917,6 +917,22 @@ Spring* find_overlapping_spring_for_mass(Mass *mass_obj, const std::vector<Objec
     return nullptr;
 }
 
+void erase_and_reindex_set(std::unordered_set<size_t> &set, size_t removed_idx)
+{
+    std::unordered_set<size_t> rebuilt;
+    rebuilt.reserve(set.size());
+
+    for(size_t idx : set)
+    {
+        if(idx == removed_idx)
+            continue;
+
+        rebuilt.insert(idx > removed_idx ? (idx - 1) : idx);
+    }
+
+    set.swap(rebuilt);
+}
+
 void draw_selection_frame(SDL_Renderer *renderer, const Object *object, int w, int h)
 {
     float left, top, right, bottom;
@@ -1009,6 +1025,10 @@ MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080)
 { 
     this->theme = theme;
     massless_checkbox = CheckBox(0, 0, (int)property_checkbox_size, false);
+
+    if(!SDL_SetWindowFullscreen(get_window(), true))
+        std::cout << "Error entering fullscreen: " << SDL_GetError() << "\n";
+    SDL_SyncWindow(get_window());
 
     int x, y;
     SDL_GetWindowSize(get_window(), &x, &y);
@@ -1214,6 +1234,35 @@ void MainWindow::event_handler(SDL_Event &event)
         property_input.clear();
         SDL_StopTextInput(get_window());
     };
+
+    if(!playing && has_selection && active_input == ActiveInput::NONE && curr_object < objects.size() && event.type == SDL_EVENT_KEY_DOWN)
+    {
+        if(!event.key.repeat && (event.key.key == SDLK_BACKSPACE || event.key.key == SDLK_DELETE))
+        {
+            if(masses.count(curr_object))
+            {
+                Mass *mass_obj = dynamic_cast<Mass*>(objects[curr_object]);
+                detach_mass_from_all_springs(mass_obj, objects, springs);
+            }
+
+            delete objects[curr_object];
+            objects.erase(objects.begin() + (long)curr_object);
+
+            erase_and_reindex_set(masses, curr_object);
+            erase_and_reindex_set(springs, curr_object);
+            erase_and_reindex_set(buttons, curr_object);
+
+            has_selection = false;
+            show_property_popup = false;
+            dragging = false;
+            resizing = false;
+            active_slider = ActiveSlider::NONE;
+            property_input.clear();
+            SDL_StopTextInput(get_window());
+
+            return;
+        }
+    }
 
     if(!playing && has_selection && active_input != ActiveInput::NONE && event.type == SDL_EVENT_TEXT_INPUT)
     {

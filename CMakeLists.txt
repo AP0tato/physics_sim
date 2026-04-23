@@ -137,4 +137,12 @@ if(WIN32)
             "${SDL_ROOT}/bin/SDL3.dll"
             $<TARGET_FILE_DIR:main>
     )
+
+    if(SDL3_TTF_LIB AND EXISTS "${SDL_ROOT}/bin/SDL3_ttf.dll")
+        add_custom_command(TARGET main POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${SDL_ROOT}/bin/SDL3_ttf.dll"
+                $<TARGET_FILE_DIR:main>
+        )
+    endif()
 endif()
