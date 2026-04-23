@@ -6,6 +6,7 @@
 #include "button.hpp"
 #include "spring.hpp"
 #include "mass.hpp"
+#include "plane.hpp"
 
 #define BTN_WIDTH 180
 #define BTN_HEIGHT 56
@@ -21,6 +22,7 @@ class ObjectPage : public Window
     void create_object(ObjectType type);
     Spring* create_spring();
     Mass* create_mass();
+    Plane* create_plane();
 
     public:
     ObjectPage(Window *main_window_ptr);

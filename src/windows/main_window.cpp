@@ -1030,15 +1030,103 @@ MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080)
     this->add_object(new Button(object_page_x, object_page_y, w, h, "Object Page", [this]() { open_objects_page(this); }));
 }
 
+void MainWindow::capture_runtime_snapshot()
+{
+    runtime_snapshot.clear();
+    runtime_snapshot.reserve(objects.size());
+
+    for(size_t i = 0; i < objects.size(); i++)
+    {
+        RuntimeSnapshot snap;
+        snap.corners = objects[i]->corners;
+        snap.base_shape = objects[i]->base_shape;
+        snap.orientation = objects[i]->orientation;
+
+        if(masses.count(i))
+        {
+            Mass *mass = dynamic_cast<Mass*>(objects[i]);
+            if(mass)
+            {
+                snap.mass_velocity_x = mass->velocity_x;
+                snap.mass_velocity_y = mass->velocity_y;
+            }
+        }
+
+        if(springs.count(i))
+        {
+            Spring *spring = dynamic_cast<Spring*>(objects[i]);
+            if(spring)
+            {
+                snap.spring_velocity = spring->velocity;
+                snap.spring_attached = spring->attached_objects;
+            }
+        }
+
+        runtime_snapshot.push_back(std::move(snap));
+    }
+
+    has_runtime_snapshot = (runtime_snapshot.size() == objects.size());
+}
+
+void MainWindow::restore_runtime_snapshot()
+{
+    if(!has_runtime_snapshot || runtime_snapshot.size() != objects.size())
+        return;
+
+    for(size_t i = 0; i < objects.size(); i++)
+    {
+        objects[i]->corners = runtime_snapshot[i].corners;
+        objects[i]->base_shape = runtime_snapshot[i].base_shape;
+        objects[i]->orientation = runtime_snapshot[i].orientation;
+        objects[i]->create_hitbox();
+
+        if(masses.count(i))
+        {
+            Mass *mass = dynamic_cast<Mass*>(objects[i]);
+            if(mass)
+            {
+                mass->velocity_x = runtime_snapshot[i].mass_velocity_x;
+                mass->velocity_y = runtime_snapshot[i].mass_velocity_y;
+            }
+        }
+
+        if(springs.count(i))
+        {
+            Spring *spring = dynamic_cast<Spring*>(objects[i]);
+            if(spring)
+            {
+                spring->velocity = runtime_snapshot[i].spring_velocity;
+                spring->attached_objects = runtime_snapshot[i].spring_attached;
+            }
+        }
+    }
+}
+
 void MainWindow::toggle_playing()
 {
-    playing = !playing;
+    if(!playing)
+    {
+        capture_runtime_snapshot();
+        playing = true;
+        animating = true;
+    }
+    else
+    {
+        playing = false;
+        animating = false;
+        restore_runtime_snapshot();
+        dragging = false;
+        resizing = false;
+        has_selection = false;
+        show_property_popup = false;
+    }
+
     active_slider = ActiveSlider::NONE;
     active_input = ActiveInput::NONE;
     property_input.clear();
     SDL_StopTextInput(get_window());
     if(play_button)
-        play_button->label.set_text(playing ? "Pause" : "Play");
+        play_button->label.set_text(playing ? "Stop" : "Play");
 }
 
 void MainWindow::add_object(Object *object)
@@ -1595,6 +1683,10 @@ void MainWindow::main_loop()
 
     for(size_t i = 0; i < objects.size(); i++)
     {
+        if(!objects[i]->anchor)
+        {
+            
+        }
         objects[i]->draw_object(get_renderer(), theme, w, h);
     }
 

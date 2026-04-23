@@ -54,12 +54,15 @@ ObjectPage::ObjectPage(Window *main_window_ptr)
 
     Button *add_spring = new Button(page_button_x, page_button_y, BTN_WIDTH, BTN_HEIGHT, "Add Spring", [this](){ create_object(ObjectType::SPRING); });
     Button *add_mass = new Button(page_button_x, page_button_y + BTN_HEIGHT + page_button_gap, BTN_WIDTH, BTN_HEIGHT, "Add Mass", [this](){ create_object(ObjectType::MASS); });
+    Button *add_plane = new Button(page_button_x, page_button_y + (BTN_HEIGHT + page_button_gap) * 2, BTN_WIDTH, BTN_HEIGHT, "Add Plane", [this](){ create_object(ObjectType::PLANE); });
 
     buttons.push_back(add_spring);
     buttons.push_back(add_mass);
+    buttons.push_back(add_plane);
 
     normalize_button(add_spring);
     normalize_button(add_mass);
+    normalize_button(add_plane);
 }
 
 void ObjectPage::main_loop()
@@ -108,6 +111,9 @@ void ObjectPage::create_object(ObjectType type)
             break;
         case ObjectType::MASS:
             obj = create_mass();
+            break;
+        case ObjectType::PLANE:
+            obj = create_plane();
             break;
         default:
             break;
@@ -162,4 +168,27 @@ Mass* ObjectPage::create_mass()
     };
 
     return new Mass(corners, HitboxType::RECTANGLE, 1.0f);
+}
+
+Plane* ObjectPage::create_plane()
+{
+    int w = 1920;
+    int h = 1080;
+    if(ptr_main)
+        SDL_GetWindowSize(ptr_main->get_window(), &w, &h);
+
+    const float x = w * 0.5f;
+    const float y = h * 0.5f;
+
+    std::vector<std::array<float,2>> corners;
+    const float line_w = 320.0f;
+    const float thickness = 6.0f;
+    corners = {
+        {x - line_w * 0.5f, y - thickness * 0.5f},
+        {x + line_w * 0.5f, y - thickness * 0.5f},
+        {x + line_w * 0.5f, y + thickness * 0.5f},
+        {x - line_w * 0.5f, y + thickness * 0.5f}
+    };
+
+    return new Plane(corners, false);
 }

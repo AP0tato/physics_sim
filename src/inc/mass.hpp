@@ -8,8 +8,6 @@ class Mass : public Object
     public:
     Mass(const std::vector<std::array<float,2>> &corners, HitboxType shape, float mass);
     float mass;
-    float velocity_x;
-    float velocity_y;
 
     ObjectType type() const override { return ObjectType::MASS; }
 };

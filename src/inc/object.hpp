@@ -9,7 +9,7 @@
 
 enum class HitboxType { RECTANGLE, ELLIPSE };
 enum class Orientation { UP, RIGHT, DOWN, LEFT, NONE };
-enum class ObjectType { SPRING, MASS, BUTTON };
+enum class ObjectType { SPRING, MASS, BUTTON, PLANE };
 
 class Object
 {
@@ -23,6 +23,9 @@ class Object
     void create_hitbox();
     HitboxType hitbox_type;
     Orientation orientation;
+    float velocity_x;
+    float velocity_y;
+    bool anchor;
 
     virtual ~Object() = default;
     virtual ObjectType type() const = 0;
