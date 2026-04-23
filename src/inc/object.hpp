@@ -15,7 +15,7 @@ class Object
 {
     public:
     Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation);
-    std::vector<std::array<float,2>> hitbox;
+    std::array<float,4> hitbox{};
     std::vector<std::array<float,2>> corners;
     std::vector<std::array<float,2>> base_shape;
     bool is_mouse_click(int x, int y, int w, int h);
