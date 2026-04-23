@@ -1685,7 +1685,22 @@ void MainWindow::main_loop()
     {
         if(!objects[i]->anchor)
         {
-            
+            objects[i]->velocity_y += G * DELTA_T;
+            float displacement = objects[i]->velocity_y * DELTA_T;
+
+            if(objects[i]->hitbox_type== HitboxType::RECTANGLE)
+            {
+                for(size_t j = 0; j < objects[i]->hitbox.size(); j++)
+                {
+                    objects[i]->corners[j][1] += displacement;
+                }
+            }
+            else if(objects[i]->hitbox_type == HitboxType::ELLIPSE)
+            {
+                objects[i]->corners[0][1] += displacement;
+            }
+
+            objects[i]->create_hitbox();
         }
         objects[i]->draw_object(get_renderer(), theme, w, h);
     }

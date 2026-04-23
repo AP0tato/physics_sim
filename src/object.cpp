@@ -28,14 +28,13 @@ void Object::create_hitbox()
         c_y /= n;
         float r_x = c_x - min_x;
         float r_y = c_y - min_y;
-        this->hitbox = {{c_x, c_y}, {r_x, r_y}};
+        // Ellipse hitbox layout: [center_x, center_y, radius_x, radius_y]
+        this->hitbox = {c_x, c_y, r_x, r_y};
     }
     else
     {
-        this->hitbox = {
-            {corners[0][0], corners[0][1]},
-            {corners[2][0], corners[2][1]}
-        };
+        // Rectangle hitbox layout: [x1, y1, x2, y2]
+        this->hitbox = {corners[0][0], corners[0][1], corners[2][0], corners[2][1]};
     }
 }
 
@@ -43,15 +42,21 @@ bool Object::is_mouse_click(int x, int y, int w, int h)
 {
     if(this->hitbox_type == HitboxType::RECTANGLE)
     {
-        return (x >= hitbox[0][0]*w && y >= hitbox[0][1]*h && x <= hitbox[1][0]*w && y <= hitbox[1][1]*h);
+        return (x >= hitbox[0] * w && y >= hitbox[1] * h && x <= hitbox[2] * w && y <= hitbox[3] * h);
     }
     else if(this->hitbox_type == HitboxType::ELLIPSE)
     {
-        if(hitbox.size() < 2 || hitbox[1][0] == 0 || hitbox[1][1] == 0)
+        if(hitbox[2] == 0.0f || hitbox[3] == 0.0f)
             return false;
+
+        const float cx = hitbox[0] * w;
+        const float cy = hitbox[1] * h;
+        const float rx = hitbox[2] * w;
+        const float ry = hitbox[3] * h;
+
         return (
-            ((x - hitbox[0][0]*w) * (x - hitbox[0][0])*w) / (hitbox[1][0]*w * hitbox[1][0]*w) +
-            ((y - hitbox[0][1]*h) * (y - hitbox[0][1])*h) / (hitbox[1][1]*h * hitbox[1][1]*h)
+            ((x - cx) * (x - cx)) / (rx * rx) +
+            ((y - cy) * (y - cy)) / (ry * ry)
             <= 1
         );
     }
