@@ -1,25 +1,37 @@
 #include "windows/window.hpp"
 
-Window::Window(const char* title, const int WIDTH, const int HEIGHT)
+#include <map>
+#include <string>
+
+// ── Constructor / Destructor ──────────────────────────────────────────────────
+
+Window::Window(const char *title, int width, int height, Theme *theme)
+    : theme(theme)
 {
-    window = SDL_CreateWindow(title, WIDTH, HEIGHT, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(title, width, height, SDL_WINDOW_RESIZABLE);
     if(!window)
     {
-        std::cout << "Error creating  " << title << " window: " << SDL_GetError() << "\n";
+        std::cerr << "Error creating window '" << title << "': " << SDL_GetError() << "\n";
         exit(1);
     }
 
-    renderer = SDL_CreateRenderer(window, NULL);
+    renderer = SDL_CreateRenderer(window, nullptr);
     if(!renderer)
     {
-        std::cout << "Error creating  " << title << " renderer: " << SDL_GetError() << "\n";
+        std::cerr << "Error creating renderer for '" << title << "': " << SDL_GetError() << "\n";
         exit(1);
     }
 
     SDL_SetRenderVSync(renderer, 1);
-
-    this->running = true;
+    running = true;
 }
+
+Window::~Window()
+{
+    destroy();
+}
+
+// ── Event handling ────────────────────────────────────────────────────────────
 
 void Window::event_handler(SDL_Event &event)
 {
@@ -30,31 +42,75 @@ void Window::event_handler(SDL_Event &event)
     }
 }
 
-void Window::main_loop() {}
+// ── Rendering ─────────────────────────────────────────────────────────────────
 
 void Window::clear_window(Color *bg)
 {
-    SDL_SetRenderDrawColor(this->renderer, bg->r, bg->g, bg->g, bg->a);
-    SDL_RenderClear(this->renderer);
+    // NOTE: original code passed bg->g twice (g instead of b). Fixed here.
+    SDL_SetRenderDrawColor(renderer, bg->r, bg->g, bg->b, bg->a);
+    SDL_RenderClear(renderer);
 }
 
 void Window::render()
 {
-    SDL_RenderPresent(this->renderer);
-}
-
-SDL_Window* Window::get_window()
-{
-    return this->window;
-}
-
-SDL_Renderer* Window::get_renderer()
-{
-    return this->renderer;
+    SDL_RenderPresent(renderer);
 }
 
 void Window::destroy()
 {
-    SDL_DestroyRenderer(this->renderer);
-    SDL_DestroyWindow(this->window);
+    if(renderer) { SDL_DestroyRenderer(renderer); renderer = nullptr; }
+    if(window)   { SDL_DestroyWindow(window);     window   = nullptr; }
+}
+
+// ── Font / Text ───────────────────────────────────────────────────────────────
+
+TTF_Font *Window::get_font(int size)
+{
+    // One cached font per size
+    static std::map<int, TTF_Font*> cache;
+
+    auto it = cache.find(size);
+    if(it != cache.end())
+        return it->second;
+
+    static const char *paths[] = {
+        "assets/fonts/Roboto-Regular.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/System/Library/Fonts/Supplemental/Helvetica.ttc",
+        "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        nullptr
+    };
+
+    TTF_Font *font = nullptr;
+    for(int i = 0; paths[i]; ++i)
+    {
+        font = TTF_OpenFont(paths[i], size);
+        if(font) break;
+    }
+
+    cache[size] = font;  // cache even if null so we don't retry every frame
+    return font;
+}
+
+void Window::draw_text(const std::string &text, float x, float y,
+                       SDL_Color color, int font_size)
+{
+    TTF_Font *font = get_font(font_size);
+    if(!font)
+        return;
+
+    SDL_Surface *surface = TTF_RenderText_Blended(font, text.c_str(), 0, color);
+    if(!surface)
+        return;
+
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if(texture)
+    {
+        SDL_FRect dst = {x, y, (float)surface->w, (float)surface->h};
+        SDL_RenderTexture(renderer, texture, nullptr, &dst);
+        SDL_DestroyTexture(texture);
+    }
+
+    SDL_DestroySurface(surface);
 }

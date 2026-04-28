@@ -19,6 +19,8 @@ class Spring : public Object
     float k_const;
     float mass;
     float velocity;
+    float equilibrium_pos_px;
+    float deformation_px;
     bool massless;
     std::vector<AttachedObject> attached_objects;
 

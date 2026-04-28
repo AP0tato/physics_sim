@@ -22,6 +22,7 @@ Button::Button(int x, int y, int w, int h, std::string text, std::function<void(
     this->y = y;
     this->w = w;
     this->h = h;
+    this->anchor = true;
     this->on_press = std::move(on_click);
 }
 

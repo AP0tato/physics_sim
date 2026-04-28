@@ -7,6 +7,9 @@ Object::Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbo
     this->corners = corners;
     this->base_shape = corners;
     this->orientation = orientation;
+    this->velocity_x = 0.0f;
+    this->velocity_y = 0.0f;
+    this->anchor = false;
     create_hitbox();
 }
 

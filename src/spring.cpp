@@ -9,6 +9,8 @@ Spring::Spring(const std::vector<std::array<float,2>> &corners, float k_const, b
     this->massless = massless;
     this->mass = mass;
     this->velocity = 0;
+    this->equilibrium_pos_px = 0.0f;
+    this->deformation_px = 0.0f;
 }
 
 bool Spring::is_mass_attached(const Mass *mass_obj) const
