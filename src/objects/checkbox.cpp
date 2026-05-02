@@ -1,4 +1,4 @@
-#include "checkbox.hpp"
+#include "objects/checkbox.hpp"
 
 CheckBox::CheckBox() = default;
 

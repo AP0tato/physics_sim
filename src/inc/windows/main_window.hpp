@@ -2,12 +2,12 @@
 #define MAIN_WINDOW_HPP
 
 #include "windows/window.hpp"
-#include "object.hpp"
-#include "spring.hpp"
-#include "mass.hpp"
-#include "plane.hpp"
-#include "button.hpp"
-#include "checkbox.hpp"
+#include "objects/object.hpp"
+#include "objects/spring.hpp"
+#include "objects/mass.hpp"
+#include "objects/plane.hpp"
+#include "objects/button.hpp"
+#include "objects/checkbox.hpp"
 
 #include <string>
 #include <vector>
@@ -20,6 +20,7 @@ class MainWindow : public Window
 {
 public:
     explicit MainWindow(Theme *theme);
+    ~MainWindow();
 
     void add_object(Object *object);
     void toggle_playing();
@@ -42,11 +43,13 @@ private:
         float       mass_velocity_y  = 0.0f;
     };
 
+    // ── Child windows (ObjectPage etc.) ──────────────────────────────────
+    std::vector<Window*>       child_windows;
+
     // ── Scene ─────────────────────────────────────────────────────────────
-    std::vector<Object*>              objects;
-    std::unordered_set<size_t>        masses;
-    std::unordered_set<size_t>        buttons;
-    std::unordered_set<unsigned long> planes;
+    std::unordered_set<size_t> masses;
+    std::unordered_set<size_t> buttons;
+    std::unordered_set<size_t> planes;
 
     // ── UI widgets ────────────────────────────────────────────────────────
     Button   *play_button      = nullptr;
@@ -81,7 +84,7 @@ private:
     void restore_runtime_snapshot();
 
     // Physics step — does NOT draw; caller draws separately
-    void step_gravity(Object *object, int w, int h);
+    void step_gravity(Object *object);
 };
 
 #endif // MAIN_WINDOW_HPP

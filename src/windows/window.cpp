@@ -62,6 +62,23 @@ void Window::destroy()
     if(window)   { SDL_DestroyWindow(window);     window   = nullptr; }
 }
 
+size_t Window::add_object(Object *object)
+{
+    
+    if(object)
+    {
+        int w, h; get_size(w, h);
+        for(size_t i=0; i<object->corners.size(); i++) {
+            object->corners[i][0] /= (float)w; object->corners[i][1] /= (float)h;
+            object->base_shape[i][0] /= (float)w; object->base_shape[i][1] /= (float)h;
+        }
+        object->create_hitbox();
+        objects.push_back(object);
+        return objects.size();
+    }
+    return 0;
+}
+
 // ── Font / Text ───────────────────────────────────────────────────────────────
 
 TTF_Font *Window::get_font(int size)

@@ -10,6 +10,7 @@
 
 #include "color.hpp"
 #include "themes.hpp"
+#include "objects/object.hpp"
 
 // Forward declaration so Window can hold the global window list
 // without a circular include. Defined in app_state.hpp / main.cpp.
@@ -42,8 +43,11 @@ public:
 
     void destroy();
 
+    size_t add_object(Object *object);
+
     Theme *theme = nullptr;  // owned by whoever created the window (e.g. main)
     bool   running = false;
+    std::vector<Object*> objects;
 
 protected:
     // Returns a cached font at the requested size.

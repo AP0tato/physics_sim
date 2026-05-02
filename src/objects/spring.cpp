@@ -1,6 +1,6 @@
-#include "spring.hpp"
+#include "objects/spring.hpp"
 
-#include "mass.hpp"
+#include "objects/mass.hpp"
 
 Spring::Spring(const std::vector<std::array<float,2>> &corners, float k_const, bool massless, float mass, Orientation orientation)
     : Object(corners, HitboxType::RECTANGLE, orientation)  // Call parent constructor in initializer list

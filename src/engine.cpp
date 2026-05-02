@@ -1,5 +1,5 @@
 #include "engine.hpp"
-#include "object.hpp"
+#include "objects/object.hpp"
 
 void translate_object(Object *object, float distance, float angle)
 {

@@ -2,7 +2,7 @@
 #define MENU_WINDOW_HPP
 
 #include "windows/window.hpp"
-#include "button.hpp"
+#include "objects/button.hpp"
 
 #include <vector>
 
@@ -10,6 +10,7 @@ class MenuWindow : public Window
 {
 public:
     explicit MenuWindow(Theme *theme);
+    ~MenuWindow();
 
     void main_loop()                  override;
     void event_handler(SDL_Event &ev) override;
@@ -17,7 +18,6 @@ public:
 private:
     std::vector<Button*> buttons;
 
-    // Normalises pixel coords → [0,1] after the window is created
     void register_button(Button *btn);
 };
 

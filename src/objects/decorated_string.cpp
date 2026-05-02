@@ -1,4 +1,4 @@
-#include "decorated_string.hpp"
+#include "objects/decorated_string.hpp"
 
 #include <utility>
 

@@ -1,4 +1,4 @@
-#include "object.hpp"
+#include "objects/object.hpp"
 #include "engine.hpp"
 
 Object::Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation)
@@ -77,5 +77,58 @@ void Object::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
         int y2 = corners[(i+1)%n][1]*h;
 
         draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
+    }
+}
+
+void Object::move_object_by_pixels(int dx, int dy, int w, int h)
+{
+    const float ddx = (float)dx / (float)w;
+    const float ddy = (float)dy / (float)h;
+
+    for(size_t i = 0; i < corners.size(); i++)
+    {
+        corners[i][0]    += ddx;  corners[i][1]    += ddy;
+        base_shape[i][0] += ddx;  base_shape[i][1] += ddy;
+    }
+
+    float sx, sy;
+    constrain_object_to_window(sx, sy);
+    create_hitbox();
+}
+
+bool Object::constrain_object_to_window(float &shift_x, float &shift_y)
+{
+    float left, top, right, bottom;
+    get_rect_bounds(left, top, right, bottom);
+
+    shift_x = shift_y = 0.0f;
+    if(left  < 0.0f) shift_x = -left;
+    else if(right  > 1.0f) shift_x = 1.0f - right;
+
+    if(top   < 0.0f) shift_y = -top;
+    else if(bottom > 1.0f) shift_y = 1.0f - bottom;
+
+    if(std::fabs(shift_x) < 1e-6f && std::fabs(shift_y) < 1e-6f)
+        return false;
+
+    for(size_t i = 0; i < corners.size(); i++)
+    {
+        corners[i][0]    += shift_x;  corners[i][1]    += shift_y;
+        base_shape[i][0] += shift_x;  base_shape[i][1] += shift_y;
+    }
+    return true;
+}
+
+void Object::get_rect_bounds(float &left, float &top, float &right, float &bottom) const
+{
+    left = right = corners[0][0];
+    top = bottom  = corners[0][1];
+
+    for(const auto &c : corners)
+    {
+        if(c[0] < left)   left   = c[0];
+        if(c[0] > right)  right  = c[0];
+        if(c[1] < top)    top    = c[1];
+        if(c[1] > bottom) bottom = c[1];
     }
 }
