@@ -6,8 +6,10 @@
 class Theme
 {
     public:
-    Color background;
-    Color foreground;
+    Color::Color background;
+    Color::Color foreground;
+    Color::Color border;
+    Color::Color active;
 };
 
 class Light : public Theme
@@ -15,8 +17,10 @@ class Light : public Theme
     public:
     Light() 
     { 
-        background = {.r = 255, .g = 255, .b = 255, .a = 255}; 
-        foreground = {.r = 0, .g = 0, .b = 0, .a = 255};
+        background = Color::WHITE; 
+        foreground = Color::BLACK;
+        border = foreground;
+        active = Color::LIGHT_GRAY;
     }
 };
 
@@ -25,8 +29,10 @@ class Dark : public Theme
     public:
     Dark()
     {
-        background = {.r = 0, .g = 0, .b = 0, .a = 255};
-        foreground = {.r = 255, .g = 255, .b = 255, .a = 255}; 
+        background = Color::BLACK;
+        foreground = Color::WHITE; 
+        border = foreground;
+        active = Color::LIGHT_GRAY;
     }
 };
 

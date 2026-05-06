@@ -2,6 +2,7 @@
 #define MAIN_WINDOW_HPP
 
 #include "windows/window.hpp"
+#include "windows/property_popup.hpp"
 #include "objects/object.hpp"
 #include "objects/spring.hpp"
 #include "objects/mass.hpp"
@@ -50,11 +51,14 @@ private:
     std::unordered_set<size_t> masses;
     std::unordered_set<size_t> buttons;
     std::unordered_set<size_t> planes;
+    std::unordered_set<size_t> springs;
 
     // ── UI widgets ────────────────────────────────────────────────────────
-    Button   *play_button      = nullptr;
-    CheckBox  massless_checkbox;
-    CheckBox  anchor_checkbox;
+    Button                  *play_button       = nullptr;
+    PropertyPopup           *property_popup    = nullptr;
+    std::vector<Object*>     property_spring;
+    std::vector<Object*>     property_mass;
+    std::vector<Object*>     property_plane;
 
     // ── Interaction state ─────────────────────────────────────────────────
     bool         playing           = false;

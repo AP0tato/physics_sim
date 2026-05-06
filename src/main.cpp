@@ -105,5 +105,7 @@ int main(int argc, char const *argv[])
     SDL_Quit();
 
     std::cout << "Quitting...\n";
+    (void) argc;
+    (void) argv;
     return 0;
 }

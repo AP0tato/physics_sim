@@ -80,7 +80,7 @@ ObjectPage::ObjectPage(Window *main_window_ptr)
     if(ptr_main)
     {
         add_btn(row(0), "Add Spring", [this]{ create_and_add(ObjectType::SPRING); });
-        add_btn(row(1), "Add Mass",   [this]{ open_popup(PendingType::MASS);      });
+        add_btn(row(1), "Add Mass",   [this]{ create_and_add(ObjectType::MASS);   });
         add_btn(row(2), "Add Plane",  [this]{ create_and_add(ObjectType::PLANE);  });
     }
     else if(ptr_light)
@@ -373,6 +373,7 @@ void ObjectPage::create_and_add(ObjectType type)
 {
     Object *obj = nullptr;
     if(type == ObjectType::SPRING) obj = make_spring();
+    if(type == ObjectType::MASS)   obj = make_mass(1.0f);
     if(type == ObjectType::PLANE)  obj = make_plane();
     if(!obj) return;
     if(ptr_main)  ptr_main->add_object(obj);

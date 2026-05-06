@@ -44,7 +44,7 @@ void Window::event_handler(SDL_Event &event)
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
-void Window::clear_window(Color *bg)
+void Window::clear_window(Color::Color *bg)
 {
     // NOTE: original code passed bg->g twice (g instead of b). Fixed here.
     SDL_SetRenderDrawColor(renderer, bg->r, bg->g, bg->b, bg->a);

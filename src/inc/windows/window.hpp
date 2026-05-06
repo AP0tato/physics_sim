@@ -34,7 +34,7 @@ public:
     void get_size(int &w, int &h) const { SDL_GetWindowSize(window, &w, &h); }
 
     // Rendering helpers available to all subclasses
-    void clear_window(Color *bg);
+    void clear_window(Color::Color *bg);
     void render();
 
     // Text rendering — shared so MenuWindow, LightWindow etc. all have it

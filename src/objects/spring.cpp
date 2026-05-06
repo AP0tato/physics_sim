@@ -68,7 +68,7 @@ float Spring::attached_mass_total() const
 
 void Spring::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
 {
-    Color highlight = {255, 0, 0, 255};
+    Color::Color highlight = {255, 0, 0, 255};
 
     const int n = corners.size();
     for(int i = 0; i < n; i++)

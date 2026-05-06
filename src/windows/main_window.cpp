@@ -1,5 +1,8 @@
 #include "windows/main_window.hpp"
 #include "windows/object_page.hpp"
+#include "objects/slider.hpp"
+#include "objects/checkbox.hpp"
+#include "objects/togglebox.hpp"
 
 #include <array>
 #include <algorithm>
@@ -10,58 +13,7 @@
 
 namespace {
 
-constexpr float selection_padding_px        = 10.0f;
-constexpr float selection_handle_size       = 9.0f;
-constexpr int   selection_handle_pick_radius = 10;
-constexpr float property_popup_width        = 280.0f;
-constexpr float property_popup_height_mass  = 90.0f;
-constexpr float property_popup_height_spring= 186.0f;
-constexpr float property_popup_margin       = 10.0f;
-constexpr float property_popup_lift_px      = 20.0f;
-constexpr float property_slider_height      = 10.0f;
-constexpr float property_input_height       = 24.0f;
-constexpr float property_checkbox_size      = 18.0f;
-
-struct PropertyPopupRects
-{
-    SDL_FRect panel{};
-    SDL_FRect slider_1{};
-    SDL_FRect input_1{};
-    SDL_FRect slider_2{};
-    SDL_FRect input_2{};
-    SDL_FRect checkbox{};
-    SDL_FRect orientation_button{};
-    SDL_FRect anchor_checkbox{};
-};
-
 float clamp_value(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
-
-float slider_value_from_mouse(int mouse_x, const SDL_FRect &slider, float min_val, float max_val)
-{
-    if(slider.w <= 1.0f) return min_val;
-    const float t = clamp_value(((float)mouse_x - slider.x) / slider.w, 0.0f, 1.0f);
-    return min_val + (max_val - min_val) * t;
-}
-
-float slider_x_from_value(float value, const SDL_FRect &slider, float min_val, float max_val)
-{
-    const float span = max_val - min_val;
-    if(span <= 0.0f) return slider.x;
-    const float t = clamp_value((value - min_val) / span, 0.0f, 1.0f);
-    return slider.x + t * slider.w;
-}
-
-std::string format_value(float value)
-{
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%.2f", value);
-    return buf;
-}
-
-bool point_in_rect(int x, int y, const SDL_FRect &r)
-{
-    return x >= (int)r.x && y >= (int)r.y && x <= (int)(r.x + r.w) && y <= (int)(r.y + r.h);
-}
 
 const char *orientation_text(Orientation o)
 {
@@ -75,146 +27,77 @@ const char *orientation_text(Orientation o)
     }
 }
 
-void draw_slider(SDL_Renderer *r, const SDL_FRect &slider, float value, float min_v, float max_v)
-{
-    SDL_SetRenderDrawColor(r, 95, 95, 95, 255);
-    SDL_RenderFillRect(r, &slider);
-    SDL_SetRenderDrawColor(r, 40, 200, 255, 255);
-    SDL_FRect filled = slider;
-    filled.w = slider_x_from_value(value, slider, min_v, max_v) - slider.x;
-    if(filled.w < 0.0f) filled.w = 0.0f;
-    SDL_RenderFillRect(r, &filled);
-    const float thumb_x = slider_x_from_value(value, slider, min_v, max_v);
-    SDL_FRect thumb = {thumb_x - 4.0f, slider.y - 4.0f, 8.0f, slider.h + 8.0f};
-    SDL_SetRenderDrawColor(r, 240, 240, 240, 255);
-    SDL_RenderFillRect(r, &thumb);
-}
-
-void draw_input_box(SDL_Renderer *r, const SDL_FRect &box, bool active)
-{
-    SDL_SetRenderDrawColor(r, 28, 28, 28, 255);
-    SDL_RenderFillRect(r, &box);
-    SDL_SetRenderDrawColor(r, active ? 120 : 140, active ? 220 : 140, active ? 255 : 140, 255);
-    SDL_RenderRect(r, &box);
-}
-
-void draw_property_popup(SDL_Renderer *r, const PropertyPopupRects &rects, bool for_spring)
-{
-    const SDL_Color border = for_spring ? SDL_Color{255, 120, 120, 255} : SDL_Color{120, 255, 160, 255};
-    SDL_SetRenderDrawColor(r, 35, 35, 35, 235);
-    SDL_RenderFillRect(r, &rects.panel);
-    SDL_SetRenderDrawColor(r, border.r, border.g, border.b, border.a);
-    SDL_RenderRect(r, &rects.panel);
-}
-
-std::array<SDL_FPoint, 8> get_resize_handles_px(const Object *obj, int w, int h)
-{
-    float left, top, right, bottom;
-    obj->get_rect_bounds(left, top, right, bottom);
-    const float l  = left  * w - selection_padding_px;
-    const float t  = top   * h - selection_padding_px;
-    const float r  = right * w + selection_padding_px;
-    const float b  = bottom* h + selection_padding_px;
-    const float mx = (l + r) * 0.5f;
-    const float my = (t + b) * 0.5f;
-    return { SDL_FPoint{l,t}, {mx,t}, {r,t}, {r,my}, SDL_FPoint{r,b}, {mx,b}, {l,b}, {l,my} };
-}
-
-bool try_get_resize_handle(const Object *obj, int mouse_x, int mouse_y, int w, int h, size_t &handle_idx)
-{
-    constexpr int r2 = selection_handle_pick_radius * selection_handle_pick_radius;
-    auto handles = get_resize_handles_px(obj, w, h);
-    for(size_t i = 0; i < handles.size(); i++)
-    {
-        const int dx = mouse_x - (int)handles[i].x;
-        const int dy = mouse_y - (int)handles[i].y;
-        if(dx*dx + dy*dy <= r2) { handle_idx = i; return true; }
-    }
-    return false;
-}
-
-void draw_selection_frame(SDL_Renderer *r, const Object *obj, int w, int h)
-{
-    float left, top, right, bottom;
-    obj->get_rect_bounds(left, top, right, bottom);
-    SDL_SetRenderDrawColor(r, 80, 170, 255, 255);
-    SDL_FRect frame = { left*w-selection_padding_px, top*h-selection_padding_px, (right-left)*w+2*selection_padding_px, (bottom-top)*h+2*selection_padding_px };
-    SDL_RenderRect(r, &frame);
-    for(const auto &handle : get_resize_handles_px(obj, w, h))
-    {
-        SDL_FRect dot = { handle.x - selection_handle_size*0.5f, handle.y - selection_handle_size*0.5f, selection_handle_size, selection_handle_size };
-        SDL_RenderFillRect(r, &dot);
-    }
-}
-
-void set_rect_from_bounds(Object *obj, float left, float top, float right, float bottom)
-{
-    obj->corners[0] = obj->base_shape[0] = {left,  top};
-    obj->corners[1] = obj->base_shape[1] = {right, top};
-    obj->corners[2] = obj->base_shape[2] = {right, bottom};
-    obj->corners[3] = obj->base_shape[3] = {left,  bottom};
-    obj->create_hitbox();
-}
-
-void resize_rect_object_handle(Object *obj, size_t handle_idx, int dx, int dy, int w, int h)
-{
-    if(obj->corners.size() != 4) return;
-    float left, top, right, bottom;
-    obj->get_rect_bounds(left, top, right, bottom);
-    const float ndx = (float)dx / (float)w, ndy = (float)dy / (float)h;
-    bool ml = false, mr = false, mt = false, mb = false;
-    switch(handle_idx) {
-        case 0: ml = mt = true; break; case 1: mt = true; break; case 2: mr = mt = true; break;
-        case 3: mr = true; break; case 4: mr = mb = true; break; case 5: mb = true; break;
-        case 6: ml = mb = true; break; case 7: ml = true; break;
-    }
-    if(ml) left += ndx; if(mr) right += ndx; if(mt) top += ndy; if(mb) bottom += ndy;
-    const float min_w = 16.0f/(float)w, min_h = 16.0f/(float)h;
-    if(right-left < min_w) { if(ml && !mr) left = right-min_w; else right = left+min_w; }
-    if(bottom-top < min_h) { if(mt && !mb) top = bottom-min_h; else bottom = top+min_h; }
-    set_rect_from_bounds(obj, left, top, right, bottom);
-}
-
-PropertyPopupRects get_property_popup_rects(const Object *obj, int w, int h, bool for_spring)
-{
-    PropertyPopupRects rects;
-    float left, top, right, bottom;
-    obj->get_rect_bounds(left, top, right, bottom);
-    const float lpx = left*w, tpx = top*h, rpx = right*w, bpx = bottom*h;
-    const float ph = for_spring ? property_popup_height_spring : property_popup_height_mass;
-    float px = (lpx+rpx)*0.5f - property_popup_width*0.5f;
-    px = clamp_value(px, 8.0f, (float)w-property_popup_width-8.0f);
-    float py = tpx - property_popup_margin - ph - property_popup_lift_px;
-    if(py < 8.0f) py = bpx + property_popup_margin;
-    py = clamp_value(py, 8.0f, (float)h-ph-8.0f);
-    rects.panel = {px, py, property_popup_width, ph};
-    rects.slider_1 = {px+74, py+23, 130, property_slider_height};
-    rects.input_1  = {px+212, py+16, 58, property_input_height};
-    if(for_spring) {
-        rects.slider_2 = {px+74, py+63, 130, property_slider_height};
-        rects.input_2  = {px+212, py+56, 58, property_input_height};
-        rects.checkbox = {px+16, py+98, property_checkbox_size, property_checkbox_size};
-        rects.orientation_button = {px+144, py+126, 126, property_input_height};
-        rects.anchor_checkbox = {px+16, py+162, property_checkbox_size, property_checkbox_size};
-    } else {
-        rects.anchor_checkbox = {px+16, py+56, property_checkbox_size, property_checkbox_size};
-    }
-    return rects;
-}
-
 } // namespace
 
 MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080, theme)
 {
-    massless_checkbox = CheckBox(0,0,(int)property_checkbox_size, false);
-    anchor_checkbox = CheckBox(0,0,(int)property_checkbox_size, false);
     int w, h; get_size(w, h);
     play_button = new Button(w-320, 10, 150, 50, "Play", [this](){ toggle_playing(); });
+    property_popup = new PropertyPopup(theme);
+    
+    // Initialize property_spring: k(mantissa+exp), mass(mantissa+exp), massless, anchor, rededge
+    std::vector<std::array<float,2>> dummy_corners = {{0,0}, {1,0}, {1,1}, {0,1}};
+    Slider* spring_k_mantissa_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 9.99f, 2.5f);
+    Slider* spring_k_exponent_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 4.0f, 1.0f);
+    Slider* spring_mass_mantissa_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 9.99f, 1.0f);
+    Slider* spring_mass_exponent_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 4.0f, 0.0f);
+    spring_k_mantissa_slider->set_label("k mantissa");
+    spring_k_exponent_slider->set_label("k exponent (10^x)");
+    spring_mass_mantissa_slider->set_label("mass mantissa");
+    spring_mass_exponent_slider->set_label("mass exponent (10^x)");
+    property_spring.push_back(spring_k_mantissa_slider);
+    property_spring.push_back(spring_k_exponent_slider);
+    property_spring.push_back(spring_mass_mantissa_slider);
+    property_spring.push_back(spring_mass_exponent_slider);
+
+    CheckBox *spring_massless = new CheckBox(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, false);
+    spring_massless->set_label("massless");
+    property_spring.push_back(spring_massless);
+
+    CheckBox *spring_anchor = new CheckBox(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, false);
+    spring_anchor->set_label("anchor");
+    property_spring.push_back(spring_anchor);
+
+    ToggleBox *spring_rededge = new ToggleBox(dummy_corners,
+                                              HitboxType::RECTANGLE,
+                                              Orientation::NONE,
+                                              {"UP", "RIGHT", "DOWN", "LEFT"},
+                                              0);
+    spring_rededge->set_label("rededge");
+    property_spring.push_back(spring_rededge);
+    
+    // Initialize property_mass: 2 sliders + 1 checkbox
+    Slider* mass_mantissa_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 9.99f, 1.0f);
+    Slider* mass_exponent_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 50.0f, 0.0f);
+    mass_mantissa_slider->set_label("mantissa");
+    mass_exponent_slider->set_label("exponent (10^x)");
+    property_mass.push_back(mass_mantissa_slider);
+    property_mass.push_back(mass_exponent_slider);
+    CheckBox *mass_anchor = new CheckBox(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, false);
+    mass_anchor->set_label("anchor");
+    property_mass.push_back(mass_anchor);
+
+    // Initialize property_plane: rotation toggle
+    ToggleBox *plane_rotation = new ToggleBox(dummy_corners,
+                                              HitboxType::RECTANGLE,
+                                              Orientation::NONE,
+                                              {"horizontal", "vertical"},
+                                              0);
+    plane_rotation->set_label("rotation");
+    property_plane.push_back(plane_rotation);
+    
     add_object(play_button);
     add_object(new Button(w-160, 10, 150, 50, "Object Page", [this](){ child_windows.push_back(new ObjectPage(this)); }));
 }
 
-MainWindow::~MainWindow() { for(Window *w : child_windows) delete w; for(Object *o : objects) delete o; }
+MainWindow::~MainWindow() { 
+    delete property_popup; 
+    for(Object *o : property_spring) delete o;
+    for(Object *o : property_mass) delete o;
+    for(Object *o : property_plane) delete o;
+    for(Window *w : child_windows) delete w; 
+    for(Object *o : objects) delete o; 
+}
 
 void MainWindow::step_gravity(Object *obj)
 {
@@ -227,14 +110,30 @@ void MainWindow::step_gravity(Object *obj)
 
 void MainWindow::add_object(Object *object)
 {
-    const size_t idx = Window::add_object(object);
-    if(object->type() == ObjectType::BUTTON) buttons.insert(idx);
-    else if(object->type() == ObjectType::MASS) masses.insert(idx);
-    else if(object->type() == ObjectType::PLANE) planes.insert(idx);
-    
-    objects.push_back(object);
+    const size_t idx = Window::add_object(object) - 1;
+
+    switch (object->type())
+    {
+        case ObjectType::BUTTON:
+            buttons.insert(idx);
+            break;
+        case ObjectType::MASS:
+            masses.insert(idx);
+            break;
+        case ObjectType::PLANE:
+            planes.insert(idx);
+            break;
+        case ObjectType::SPRING:
+            springs.insert(idx);
+            break;
+        default:
+            std::cout << "What have you done\n";
+            break;
+    }
     
     curr_object = idx;
+    has_selection = false;  // Don't select when adding
+    show_property_popup = false;  // Don't show popup initially when adding object
 }
 
 void MainWindow::toggle_playing()
@@ -251,28 +150,216 @@ void MainWindow::main_loop()
     {
         for(size_t i=0; i<objects.size(); i++) if(!buttons.count(i) && !objects[i]->anchor) step_gravity(objects[i]);
     }
+
     for(size_t i=0; i<objects.size(); i++) 
         objects[i]->draw_object(get_renderer(), theme, w, h);
-    if(!playing && has_selection && curr_object < objects.size() && !buttons.count(curr_object)) 
+
+    if(!playing && has_selection && curr_object < objects.size() && !buttons.count(curr_object))
     {
-        draw_selection_frame(get_renderer(), objects[curr_object], w, h);
-        if(show_property_popup) {
-            auto *s = dynamic_cast<Spring*>(objects[curr_object]);
-            const bool is_s = (s != nullptr);
-            PropertyPopupRects p = get_property_popup_rects(objects[curr_object], w, h, is_s);
-            draw_property_popup(get_renderer(), p, is_s);
-            const SDL_Color tc = {230, 230, 230, 255};
-            if(masses.count(curr_object)) {
-                auto *m = dynamic_cast<Mass*>(objects[curr_object]);
-                draw_text("mass", p.panel.x+12, p.input_1.y+4, tc);
-                draw_slider(get_renderer(), p.slider_1, m->mass, 0.1f, 100.0f);
-                draw_input_box(get_renderer(), p.input_1, active_input == ActiveInput::MASS);
-                draw_text(active_input == ActiveInput::MASS ? property_input : format_value(m->mass), p.input_1.x+6, p.input_1.y+4, tc);
+        objects[curr_object]->draw_selection_frame(get_renderer(), w, h);
+        if(show_property_popup && property_popup) 
+        {
+            // Use pre-created property UI elements based on object type
+            if(auto *m = dynamic_cast<Mass*>(objects[curr_object])) 
+            {
+                if(property_mass.size() >= 3)
+                {
+                    auto *mantissa_slider = dynamic_cast<Slider*>(property_mass[0]);
+                    auto *exponent_slider = dynamic_cast<Slider*>(property_mass[1]);
+                    if(mantissa_slider && exponent_slider)
+                    {
+                        float safe_mass = std::max(0.0f, m->mass);
+                        int exponent = 0;
+                        float mantissa = safe_mass;
+                        while(mantissa >= 10.0f && exponent < 50)
+                        {
+                            mantissa /= 10.0f;
+                            exponent++;
+                        }
+                        mantissa = clamp_value(mantissa, 0.0f, 9.99f);
+                        mantissa_slider->set_value(mantissa);
+                        exponent_slider->set_value((float)exponent);
+
+                        mantissa_slider->set_on_change([m, exponent_slider](float v){
+                            const int exp = (int)std::round(exponent_slider->get_value());
+                            m->mass = clamp_value(v, 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                        exponent_slider->set_on_change([m, mantissa_slider, exponent_slider](float v){
+                            const int exp = (int)std::round(v);
+                            exponent_slider->set_value((float)exp);
+                            m->mass = clamp_value(mantissa_slider->get_value(), 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                    }
+                    if(auto *checkbox = dynamic_cast<CheckBox*>(property_mass[2]))
+                    {
+                        checkbox->set_checked(objects[curr_object]->anchor);
+                        checkbox->set_on_toggle([m](bool checked){ m->anchor = checked; });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_mass, w, h);
+                property_popup->draw(get_renderer());
             }
-            anchor_checkbox.set_position((int)p.anchor_checkbox.x, (int)p.anchor_checkbox.y);
-            anchor_checkbox.set_checked(objects[curr_object]->anchor);
-            anchor_checkbox.draw(get_renderer());
-            draw_text("anchor", p.anchor_checkbox.x+26, p.anchor_checkbox.y-1, tc);
+            else if(auto *s = dynamic_cast<Spring*>(objects[curr_object])) 
+            {
+                if(property_spring.size() >= 7)
+                {
+                    Slider *k_mantissa_slider = dynamic_cast<Slider*>(property_spring[0]);
+                    Slider *k_exponent_slider = dynamic_cast<Slider*>(property_spring[1]);
+                    Slider *mass_mantissa_slider = dynamic_cast<Slider*>(property_spring[2]);
+                    Slider *mass_exponent_slider = dynamic_cast<Slider*>(property_spring[3]);
+                    CheckBox *massless_checkbox = dynamic_cast<CheckBox*>(property_spring[4]);
+                    CheckBox *anchor_checkbox = dynamic_cast<CheckBox*>(property_spring[5]);
+                    ToggleBox *rededge_toggle = dynamic_cast<ToggleBox*>(property_spring[6]);
+
+                    if(k_mantissa_slider && k_exponent_slider)
+                    {
+                        float safe_k = std::max(0.0f, s->k_const);
+                        int k_exp = 0;
+                        float k_man = safe_k;
+                        while(k_man >= 10.0f && k_exp < 4)
+                        {
+                            k_man /= 10.0f;
+                            k_exp++;
+                        }
+                        k_man = clamp_value(k_man, 0.0f, 9.99f);
+                        k_mantissa_slider->set_value(k_man);
+                        k_exponent_slider->set_value((float)k_exp);
+
+                        k_mantissa_slider->set_on_change([s, k_exponent_slider](float v){
+                            const int exp = (int)std::round(k_exponent_slider->get_value());
+                            s->k_const = clamp_value(v, 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                        k_exponent_slider->set_on_change([s, k_mantissa_slider, k_exponent_slider](float v){
+                            const int exp = (int)std::round(v);
+                            k_exponent_slider->set_value((float)exp);
+                            s->k_const = clamp_value(k_mantissa_slider->get_value(), 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                    }
+
+                    if(mass_mantissa_slider && mass_exponent_slider)
+                    {
+                        float safe_mass = std::max(0.0f, s->mass);
+                        int mass_exp = 0;
+                        float mass_man = safe_mass;
+                        while(mass_man >= 10.0f && mass_exp < 4)
+                        {
+                            mass_man /= 10.0f;
+                            mass_exp++;
+                        }
+                        mass_man = clamp_value(mass_man, 0.0f, 9.99f);
+                        mass_mantissa_slider->set_value(mass_man);
+                        mass_exponent_slider->set_value((float)mass_exp);
+
+                        mass_mantissa_slider->set_on_change([s, mass_exponent_slider, mass_mantissa_slider](float v){
+                            if(s->massless)
+                            {
+                                s->mass = 0.0f;
+                                mass_mantissa_slider->set_value(0.0f);
+                                return;
+                            }
+                            const int exp = (int)std::round(mass_exponent_slider->get_value());
+                            s->mass = clamp_value(v, 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                        mass_exponent_slider->set_on_change([s, mass_mantissa_slider, mass_exponent_slider](float v){
+                            if(s->massless)
+                            {
+                                s->mass = 0.0f;
+                                mass_mantissa_slider->set_value(0.0f);
+                                return;
+                            }
+                            const int exp = (int)std::round(v);
+                            mass_exponent_slider->set_value((float)exp);
+                            s->mass = clamp_value(mass_mantissa_slider->get_value(), 0.0f, 9.99f) * std::pow(10.0f, (float)exp);
+                        });
+                    }
+
+                    if(massless_checkbox)
+                    {
+                        massless_checkbox->set_checked(s->massless);
+                        massless_checkbox->set_on_toggle([s, mass_mantissa_slider](bool checked){
+                            s->massless = checked;
+                            if(checked)
+                            {
+                                s->mass = 0.0f;
+                                if(mass_mantissa_slider) mass_mantissa_slider->set_value(0.0f);
+                            }
+                        });
+                    }
+
+                    if(anchor_checkbox)
+                    {
+                        anchor_checkbox->set_checked(s->anchor);
+                        anchor_checkbox->set_on_toggle([s](bool checked){ s->anchor = checked; });
+                    }
+
+                    if(rededge_toggle)
+                    {
+                        size_t edge_index = 0;
+                        switch(s->orientation)
+                        {
+                            case Orientation::UP: edge_index = 0; break;
+                            case Orientation::RIGHT: edge_index = 1; break;
+                            case Orientation::DOWN: edge_index = 2; break;
+                            case Orientation::LEFT: edge_index = 3; break;
+                            default: edge_index = 0; break;
+                        }
+                        rededge_toggle->set_index(edge_index);
+                        rededge_toggle->set_on_change([s](size_t idx, const std::string &value){
+                            (void)value;
+                            switch(idx)
+                            {
+                                case 0: s->orientation = Orientation::UP; break;
+                                case 1: s->orientation = Orientation::RIGHT; break;
+                                case 2: s->orientation = Orientation::DOWN; break;
+                                case 3: s->orientation = Orientation::LEFT; break;
+                                default: break;
+                            }
+                        });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_spring, w, h);
+                property_popup->draw(get_renderer());
+            }
+            else if(auto *p = dynamic_cast<Plane*>(objects[curr_object]))
+            {
+                if(property_plane.size() >= 1)
+                {
+                    if(auto *rotation_toggle = dynamic_cast<ToggleBox*>(property_plane[0]))
+                    {
+                        rotation_toggle->set_index(p->vertical ? 1 : 0);
+                        rotation_toggle->set_on_change([p](size_t idx, const std::string &value){
+                            (void)value;
+                            const bool make_vertical = (idx == 1);
+                            if(p->vertical == make_vertical)
+                                return;
+
+                            float left, top, right, bottom;
+                            p->get_rect_bounds(left, top, right, bottom);
+
+                            const float cx = (left + right) * 0.5f;
+                            const float cy = (top + bottom) * 0.5f;
+                            const float curr_w = right - left;
+                            const float curr_h = bottom - top;
+                            const float length = std::max(curr_w, curr_h);
+                            const float thickness = std::max(1e-4f, std::min(curr_w, curr_h));
+
+                            const float new_w = make_vertical ? thickness : length;
+                            const float new_h = make_vertical ? length : thickness;
+
+                            p->set_rect_from_bounds(
+                                cx - new_w * 0.5f,
+                                cy - new_h * 0.5f,
+                                cx + new_w * 0.5f,
+                                cy + new_h * 0.5f
+                            );
+
+                            p->vertical = make_vertical;
+                        });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_plane, w, h);
+                property_popup->draw(get_renderer());
+            }
         }
     }
     for(Window *cw : child_windows) { cw->clear_window(&cw->theme->background); cw->main_loop(); cw->render(); }
@@ -281,39 +368,99 @@ void MainWindow::main_loop()
 void MainWindow::event_handler(SDL_Event &event)
 {
     Window::event_handler(event);
-    for(auto it = child_windows.begin(); it != child_windows.end(); ) {
+    for(auto it = child_windows.begin(); it != child_windows.end(); ) 
+    {
         (*it)->event_handler(event);
         if(!(*it)->running) { delete *it; it = child_windows.erase(it); } else ++it;
     }
+
+    if(show_property_popup && property_popup && property_popup->handle_event(event))
+        return;
+
     int w, h; get_size(w, h);
 
-    if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        bool hit_any = false;
-        if(!playing && has_selection && show_property_popup && curr_object < objects.size()) {
-            PropertyPopupRects p = get_property_popup_rects(objects[curr_object], w, h, dynamic_cast<Spring*>(objects[curr_object]) != nullptr);
-            if(point_in_rect(event.button.x, event.button.y, p.panel)) return;
+    if(event.type == SDL_EVENT_KEY_DOWN)
+    {
+        if(event.key.key == SDLK_BACKSPACE && !playing && has_selection && curr_object < objects.size() && !buttons.count(curr_object))
+        {
+            const size_t deleted_idx = curr_object;
+
+            delete objects[deleted_idx];
+            objects.erase(objects.begin() + (long)deleted_idx);
+
+            auto reindex_set_after_delete = [deleted_idx](std::unordered_set<size_t> &indices)
+            {
+                std::unordered_set<size_t> remapped;
+                remapped.reserve(indices.size());
+                for(size_t idx : indices)
+                {
+                    if(idx == deleted_idx)
+                        continue;
+                    remapped.insert(idx > deleted_idx ? idx - 1 : idx);
+                }
+                indices.swap(remapped);
+            };
+
+            reindex_set_after_delete(masses);
+            reindex_set_after_delete(buttons);
+            reindex_set_after_delete(planes);
+            reindex_set_after_delete(springs);
+
+            has_selection = false;
+            show_property_popup = false;
+            dragging = false;
+            resizing = false;
+
+            if(objects.empty()) curr_object = 0;
+            else if(deleted_idx >= objects.size()) curr_object = objects.size() - 1;
+            else curr_object = deleted_idx;
+
+            return;
         }
-        for(size_t i=0; i<objects.size(); i++) {
-            if(objects[i]->is_mouse_click(event.button.x, event.button.y, w, h)) {
+    }
+
+    if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) 
+    {
+        bool hit_any = false;
+        if(!playing && has_selection && show_property_popup && curr_object < objects.size()) 
+        {
+            if(property_popup && property_popup->contains(event.button.x, event.button.y))
+                return;
+        }
+        for(size_t i=0; i<objects.size(); i++) 
+        {
+            if(objects[i]->is_mouse_click(event.button.x, event.button.y, w, h)) 
+            {
                 if(buttons.count(i)) { dynamic_cast<Button*>(objects[i])->press(); hit_any = true; break; }
                 hit_any = true; curr_object = i; has_selection = true;
                 
                 // CRITICAL FIX: Only show popup if it's a double-click (clicks >= 2)
-                show_property_popup = (event.button.clicks >= 2); 
-                
-                x_start = event.button.x; y_start = event.button.y;
-                float l, t, r, b; objects[i]->get_rect_bounds(l, t, r, b);
-                drag_anchor_x = event.button.x - (int)(l*w); drag_anchor_y = event.button.y - (int)(t*h);
-                size_t hh; resizing = try_get_resize_handle(objects[i], event.button.x, event.button.y, w, h, hh);
-                if(resizing) resize_handle = hh; dragging = !resizing;
+                show_property_popup = (event.button.clicks >= 2);
+
+                if(show_property_popup)
+                {
+                    // Opening the popup cancels any object transformation.
+                    dragging = false;
+                    resizing = false;
+                }
+                else
+                {
+                    x_start = event.button.x; y_start = event.button.y;
+                    float l, t, r, b; objects[i]->get_rect_bounds(l, t, r, b);
+                    drag_anchor_x = event.button.x - (int)(l*w); drag_anchor_y = event.button.y - (int)(t*h);
+                    size_t hh; resizing = objects[i]->try_get_resize_handle(event.button.x, event.button.y, w, h, hh);
+                    if(resizing) resize_handle = hh;
+                    dragging = !resizing;
+                }
                 break;
             }
         }
         if(!hit_any) { has_selection = show_property_popup = false; }
     }
     if(event.type == SDL_EVENT_MOUSE_BUTTON_UP) dragging = resizing = false;
-    if(event.type == SDL_EVENT_MOUSE_MOTION && (dragging || resizing)) {
-        if(resizing) resize_rect_object_handle(objects[curr_object], resize_handle, event.motion.x-(int)x_start, event.motion.y-(int)y_start, w, h);
+    if(event.type == SDL_EVENT_MOUSE_MOTION && !show_property_popup && (dragging || resizing)) 
+    {
+        if(resizing) objects[curr_object]->resize_rect_object_handle(resize_handle, event.motion.x-(int)x_start, event.motion.y-(int)y_start, w, h);
         else objects[curr_object]->move_object_by_pixels(event.motion.x-(int)x_start, event.motion.y-(int)y_start, w, h);
         x_start = event.motion.x; y_start = event.motion.y;
     }

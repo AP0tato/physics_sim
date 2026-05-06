@@ -4,6 +4,7 @@
 #include "windows/window.hpp"
 #include "objects/object.hpp"
 #include "objects/button.hpp"
+#include "windows/property_popup.hpp"
 
 #include <vector>
 
@@ -19,8 +20,14 @@ public:
     void event_handler(SDL_Event &ev) override;
 
 private:
+    Button               *play_button       = nullptr;
+    PropertyPopup        *property_popup    = nullptr;
+
     std::vector<Window*> windows;     // child windows (ObjectPage etc.)
     std::vector<Button*> ui_buttons;
+    std::vector<Object*> property_mass;
+    std::vector<Object*> property_mirror;
+    std::vector<Object*> property_source;
 
     void normalize_button(Button *btn);
     void handle_collisions();
