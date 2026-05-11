@@ -8,10 +8,11 @@
 // Forward declaration to avoid circular includes
 class Object;
 
-void translate_object(Object *object, float distance, float angle);
+namespace Engine
+{
+    bool is_collision(Object *a, Object *b);
 
-void rotate_object(Object *object, float angle);
-
-void draw_line(SDL_Renderer *renderer, int x1, int y1, int x2, int y2, Color::Color *color);
+    void draw_line(SDL_Renderer *renderer, int x1, int y1, int x2, int y2, Color::Color *color);
+}
 
 #endif

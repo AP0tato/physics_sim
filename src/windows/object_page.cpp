@@ -410,7 +410,7 @@ Plane* ObjectPage::make_plane()
                       {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}}, false);
 }
 
-Plane* ObjectPage::make_mirror(MirrorType shape)
+Mirror* ObjectPage::make_mirror(MirrorType shape)
 {
     int w=1920, h=1080;
     if(ptr_light) ptr_light->get_size(w,h);

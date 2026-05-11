@@ -4,6 +4,8 @@
 #include "windows/window.hpp"
 #include "objects/object.hpp"
 #include "objects/button.hpp"
+#include "objects/mirror.hpp"
+#include "objects/light.hpp"
 #include "windows/property_popup.hpp"
 
 #include <vector>

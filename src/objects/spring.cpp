@@ -79,8 +79,8 @@ void Spring::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
         int y2 = corners[(i+1)%n][1]*h;
 
         if(i == static_cast<int>(orientation))
-            draw_line(renderer, x1, y1, x2, y2, &highlight);
+            Engine::draw_line(renderer, x1, y1, x2, y2, &highlight);
         else
-            draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
+            Engine::draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
     }
 }

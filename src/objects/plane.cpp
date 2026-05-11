@@ -31,11 +31,11 @@ void Plane::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
     if(vertical)
     {
         const int x = (int)(((left + right) * 0.5f) * w);
-        draw_line(renderer, x, (int)(top * h), x, (int)(bottom * h), &theme->foreground);
+        Engine::draw_line(renderer, x, (int)(top * h), x, (int)(bottom * h), &theme->foreground);
     }
     else
     {
         const int y = (int)(((top + bottom) * 0.5f) * h);
-        draw_line(renderer, (int)(left * w), y, (int)(right * w), y, &theme->foreground);
+        Engine::draw_line(renderer, (int)(left * w), y, (int)(right * w), y, &theme->foreground);
     }
 }

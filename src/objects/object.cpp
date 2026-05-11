@@ -22,7 +22,13 @@ Object::Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbo
 
 void Object::create_hitbox()
 {
-    if(hitbox_type == HitboxType::ELLIPSE)
+    // SPECIAL hitbox types are not handled here
+    if(hitbox_type == HitboxType::SPECIAL)
+    {
+        std::cout << "Could not create object hitbox, implementation is missing\n";
+        return;
+    }
+    else if(hitbox_type == HitboxType::ELLIPSE)
     {
         float c_x = 0, min_x = corners[0][0];
         float c_y = 0, min_y = corners[0][1];
@@ -38,13 +44,26 @@ void Object::create_hitbox()
         c_y /= n;
         float r_x = c_x - min_x;
         float r_y = c_y - min_y;
-        // Ellipse hitbox layout: [center_x, center_y, radius_x, radius_y]
-        this->hitbox = {c_x, c_y, r_x, r_y};
+        // Ellipse hitbox layout as 2D: single element {center_x, center_y, radius_x, radius_y}
+        this->hitbox.clear();
+        this->hitbox.push_back({c_x, c_y, r_x, r_y});
     }
     else
     {
-        // Rectangle hitbox layout: [x1, y1, x2, y2]
-        this->hitbox = {corners[0][0], corners[0][1], corners[2][0], corners[2][1]};
+        // Rectangle hitbox layout as 2D: four corner entries [{x,y,0,0}, ...]
+        this->hitbox.clear();
+        const size_t n = corners.size();
+        // If we have at least four corners use the first four, otherwise use all available
+        if(n >= 4)
+        {
+            for(size_t i = 0; i < 4; ++i)
+                this->hitbox.push_back({corners[i][0], corners[i][1], 0.0f, 0.0f});
+        }
+        else
+        {
+            for(size_t i = 0; i < n; ++i)
+                this->hitbox.push_back({corners[i][0], corners[i][1], 0.0f, 0.0f});
+        }
     }
 }
 
@@ -52,17 +71,27 @@ bool Object::is_mouse_click(int x, int y, int w, int h)
 {
     if(this->hitbox_type == HitboxType::RECTANGLE)
     {
-        return (x >= hitbox[0] * w && y >= hitbox[1] * h && x <= hitbox[2] * w && y <= hitbox[3] * h);
+        if(this->hitbox.empty()) return false;
+        float left = hitbox[0][0], top = hitbox[0][1], right = hitbox[0][0], bottom = hitbox[0][1];
+        for(const auto &p : hitbox)
+        {
+            if(p[0] < left) left = p[0];
+            if(p[0] > right) right = p[0];
+            if(p[1] < top) top = p[1];
+            if(p[1] > bottom) bottom = p[1];
+        }
+        return (x >= left * w && y >= top * h && x <= right * w && y <= bottom * h);
     }
     else if(this->hitbox_type == HitboxType::ELLIPSE)
     {
-        if(hitbox[2] == 0.0f || hitbox[3] == 0.0f)
-            return false;
+        if(this->hitbox.empty()) return false;
+        const auto &e = this->hitbox[0];
+        if(e[2] == 0.0f || e[3] == 0.0f) return false;
 
-        const float cx = hitbox[0] * w;
-        const float cy = hitbox[1] * h;
-        const float rx = hitbox[2] * w;
-        const float ry = hitbox[3] * h;
+        const float cx = e[0] * w;
+        const float cy = e[1] * h;
+        const float rx = e[2] * w;
+        const float ry = e[3] * h;
 
         return (
             ((x - cx) * (x - cx)) / (rx * rx) +
@@ -83,7 +112,7 @@ void Object::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
         int x2 = corners[(i+1)%n][0]*w;
         int y2 = corners[(i+1)%n][1]*h;
 
-        draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
+        Engine::draw_line(renderer, x1, y1, x2, y2, &theme->foreground);
     }
 }
 

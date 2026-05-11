@@ -78,7 +78,7 @@ private:
     Mass*   make_mass(float value);           // value = mantissa × 10^exponent
     Plane*  make_plane();
     Plane*  make_wall();
-    Plane*  make_mirror(MirrorType shape);
+    Mirror*  make_mirror(MirrorType shape);
 };
 
 #endif // OBJECT_PAGE_HPP

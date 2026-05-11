@@ -4,10 +4,11 @@
 #include <vector>
 #include <array>
 #include <SDL3/SDL.h>
+#include <iostream>
 #include "color.hpp"
 #include "themes.hpp"
 
-enum class HitboxType { RECTANGLE, ELLIPSE };
+enum class HitboxType { RECTANGLE, ELLIPSE, SPECIAL };
 enum class Orientation { UP, RIGHT, DOWN, LEFT, NONE };
 enum class ObjectType { SPRING, MASS, BUTTON, PLANE, LIGHT_SOURCE, WALL, MIRROR, SLIDER, CHECKBOX, TEXTFIELD, TOGGLEBOX };
 
@@ -16,18 +17,19 @@ class Object
     public:
     std::vector<std::array<float,2>> corners;
     std::vector<std::array<float,2>> base_shape;
-    std::array<float,4>              hitbox{};
+    std::vector<std::array<float,4>> hitbox; // 2D: for RECTANGLE -> 4 entries {x,y,0,0}; for ELLIPSE -> 1 entry {cx,cy,rx,ry}
     HitboxType                       hitbox_type;
     Orientation                      orientation;
     float                            velocity_x;
     float                            velocity_y;
     bool                             anchor;
 
+    Object() = default;
     Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation);
 
     bool is_mouse_click(int x, int y, int w, int h);
     virtual void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h);
-    void create_hitbox();
+    virtual void create_hitbox();
 
     void move_object_by_pixels(int dx, int dy, int w, int h);
 

@@ -6,17 +6,20 @@
 #include <cstdlib>
 #include <cstddef>
 #include <limits.h>
+#include <vector>
 #include <mach-o/dyld.h>
 #include <string>
 
-#include "gpu_compute.hpp"
+#include "wrapper.hpp"
 
-namespace gpu_compute {
+namespace metal {
 namespace {
 
 id<MTLDevice> g_device = nil;
 id<MTLCommandQueue> g_queue = nil;
 id<MTLComputePipelineState> g_pipeline = nil;
+
+std::vector<std::string> functions;
 
 NSString* metallib_path()
 {
@@ -77,48 +80,6 @@ bool create_pipeline()
 }
 
 } // namespace
-
-GpuVendor detect_vendor()
-{
-	id<MTLDevice> device = g_device ? g_device : MTLCreateSystemDefaultDevice();
-	if (!device)
-	{
-		return GpuVendor::Unknown;
-	}
-
-	NSString* name = device.name;
-	if (!name)
-	{
-		return GpuVendor::Unknown;
-	}
-
-	std::string vendor_name = [name UTF8String];
-	std::transform(vendor_name.begin(), vendor_name.end(), vendor_name.begin(), [](unsigned char c) {
-		return static_cast<char>(std::tolower(c));
-	});
-
-	if (vendor_name.find("nvidia") != std::string::npos)
-	{
-		return GpuVendor::Nvidia;
-	}
-
-	if (vendor_name.find("amd") != std::string::npos || vendor_name.find("radeon") != std::string::npos)
-	{
-		return GpuVendor::Amd;
-	}
-
-	if (vendor_name.find("intel") != std::string::npos)
-	{
-		return GpuVendor::Intel;
-	}
-
-	if (vendor_name.find("apple") != std::string::npos)
-	{
-		return GpuVendor::Apple;
-	}
-
-	return GpuVendor::Unknown;
-}
 
 bool init()
 {

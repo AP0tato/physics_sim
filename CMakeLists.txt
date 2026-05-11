@@ -10,7 +10,7 @@ add_compile_options(-Wall -Wextra -Wpedantic -g)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 if(APPLE)
-    list(APPEND SOURCES src/gpu-compute/metal/handler.mm)
+    list(APPEND SOURCES src/gpu-compute/metal/wrapper.mm)
 endif()
 
 add_executable(main ${SOURCES})
