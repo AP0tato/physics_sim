@@ -55,13 +55,6 @@ private:
     // ── Property popup ────────────────────────────────────────────────────
     PropertyPopup        *property_popup = nullptr;
 
-    // Pre-built popup widget lists (one per object type)
-    std::vector<Object*>  property_mirror;
-    std::vector<Object*>  property_wall;
-    std::vector<Object*>  property_source;   // LightSource
-    std::vector<Object*>  property_laser;
-    std::vector<Object*>  property_ray;
-
     // ── Interaction state ─────────────────────────────────────────────────
     bool   playing           = false;
     bool   dragging          = false;
@@ -76,15 +69,10 @@ private:
     // ── Private helpers ───────────────────────────────────────────────────
     void normalize_button(Button *btn);
     void handle_collisions();
-
-    // Build and load the right popup widgets for the currently selected object
     void load_property_popup();
 
-    void rebuild_property_mirror();
-    void rebuild_property_wall();
-    void rebuild_property_source();
-    void rebuild_property_laser();
-    void rebuild_property_ray();
+    // Ray simulation — called every frame
+    void simulate_rays(SDL_Renderer *renderer, int w, int h);
 };
 
 #endif // LIGHT_WINDOW_HPP

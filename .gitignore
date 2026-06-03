@@ -4,3 +4,4 @@ build/
 .continue/
 .venv/
 .aider*
+*.zip

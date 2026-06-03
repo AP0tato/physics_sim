@@ -8,7 +8,7 @@ namespace
     // Handle hitbox is half the handle size + 5px extra on each side
     constexpr int   selection_handle_pick_radius = (int)(selection_handle_size * 0.5f) + 5;
     // Extra padding added around the object bounding box for drag hit-testing
-    constexpr float drag_hitbox_padding_px       = 10.0f;
+    constexpr float drag_hitbox_padding_px       = 2.0f;
 }
 
 Object::Object(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation)

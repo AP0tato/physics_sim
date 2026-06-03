@@ -4,6 +4,7 @@
 #include <array>
 #include "objects/object.hpp"
 #include "sim_enums.hpp"
+#include <math.h>
 
 // -----------------------------------------------------------------------------
 // PhysicsObject — shared base for all physics-capable objects regardless of

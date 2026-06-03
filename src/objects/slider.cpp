@@ -1,4 +1,5 @@
 #include "objects/slider.hpp"
+#include <cmath>
 
 #include <map>
 #include <cstdio>
@@ -9,10 +10,13 @@ namespace
 {
     float clamp_value(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-    std::string format_value(float value)
+    std::string format_value(float value, bool as_int)
     {
         char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.2f", value);
+        if(as_int)
+            std::snprintf(buf, sizeof(buf), "%d", (int)std::round(value));
+        else
+            std::snprintf(buf, sizeof(buf), "%.2f", value);
         return buf;
     }
 
@@ -80,13 +84,14 @@ void Slider::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
     const SDL_Color text_color = theme ? SDL_Color{theme->foreground.r, theme->foreground.g, theme->foreground.b, theme->foreground.a} : SDL_Color{220, 220, 220, 255};
     const float current_x = slider_x_from_value(value, min_v, max_v);
 
+    const float display_value = integer_mode ? std::round(value) : value;
     std::string title = label.empty() ? "slider" : label;
     title += "  ";
-    title += format_value(value);
+    title += format_value(display_value, integer_mode);
     title += " [";
-    title += format_value(min_v);
+    title += format_value(min_v, integer_mode);
     title += " - ";
-    title += format_value(max_v);
+    title += format_value(max_v, integer_mode);
     title += "]";
     draw_text(renderer, title, slider.x, slider.y - 24.0f, text_color, 13);
 
@@ -131,6 +136,7 @@ bool Slider::handle_mouse_down(int mouse_x, int mouse_y)
 
     dragging = true;
     value = slider_value_from_mouse(mouse_x, min_v, max_v);
+    if(integer_mode) value = std::round(value);
     if(on_change)
         on_change(value);
     return true;
@@ -142,6 +148,7 @@ bool Slider::handle_mouse_motion(int mouse_x)
         return false;
 
     value = slider_value_from_mouse(mouse_x, min_v, max_v);
+    if(integer_mode) value = std::round(value);
     if(on_change)
         on_change(value);
     return true;

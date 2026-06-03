@@ -7,9 +7,10 @@
 class Laser2D : public PhysicsObject2D
 {
 public:
-    // Ray color — stored as RGBA and as a hex string for the text field
-    SDL_Color   ray_color     = {255, 50, 50, 255};   // default: red
-    std::string ray_color_hex = "FF3232";              // uppercase, no '#'
+    SDL_Color   ray_color     = {255, 50, 50, 255};
+    std::string ray_color_hex = "FF3232";   // uppercase, no '#'
+    float       angle_deg     = 90.0f;      // emission direction (90 = straight down)
+    float       intensity     = 1.0f;       // brightness multiplier
 
     Laser2D(const std::vector<std::vector<float>> &corners = {});
 

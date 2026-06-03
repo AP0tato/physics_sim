@@ -507,16 +507,16 @@ Wall* ObjectPage::make_wall()
 {
     int w=1920, h=1080;
     if(ptr_light) ptr_light->get_size(w,h);
-    const float cx=w*0.5f, cy=h*0.5f, lw=200.f, th=20.f;
+    const float cx=w*0.5f, cy=h*0.5f, lw=200.f, th=6.f;
     return new Wall({{cx-lw*0.5f,cy-th*0.5f},{cx+lw*0.5f,cy-th*0.5f},
-                     {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}}, true);
+                     {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}}, false);
 }
 
 LightSource* ObjectPage::make_light_source()
 {
     int w=1920, h=1080;
     if(ptr_light) ptr_light->get_size(w,h);
-    const float bw=24.f, bh=24.f;
+    const float bw=160.f, bh=4.f;   // wide and thin; height is fixed
     const float x=w*0.5f-bw*0.5f, y=h*0.5f-bh*0.5f;
     return new LightSource({{x,y},{x+bw,y},{x+bw,y+bh},{x,y+bh}});
 }

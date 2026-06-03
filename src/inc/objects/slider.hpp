@@ -12,7 +12,8 @@ class Slider : public Object
     float     min_v;
     float     max_v;
     float     value;
-    bool      dragging = false;
+    bool      dragging     = false;
+    bool      integer_mode = false;
     std::string label;
     std::function<void(float)> on_change;
 
@@ -26,6 +27,7 @@ class Slider : public Object
     float slider_value_from_mouse(int mouse_x, float min_val, float max_val);
     
     void set_label(const std::string &text) { label = text; }
+    void set_integer_mode(bool b) { integer_mode = b; }
     void set_range(float min_v, float max_v) { this->min_v = min_v; this->max_v = max_v; }
     void set_value(float v) { value = v; }
     void set_on_change(std::function<void(float)> callback) { on_change = std::move(callback); }

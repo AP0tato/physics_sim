@@ -31,7 +31,7 @@ class Object
     Object() = default;
     Object(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation);
 
-    bool is_mouse_click(int x, int y, int w, int h);
+    virtual bool is_mouse_click(int x, int y, int w, int h);
     virtual void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h);
     virtual void create_hitbox();
 
@@ -44,7 +44,7 @@ class Object
     void get_rect_bounds(float &left, float &top, float &right, float &bottom) const;
     void set_rect_from_bounds(float left, float top, float right, float bottom);
 
-    void resize_rect_object_handle(size_t handle_idx, int dx, int dy, int w, int h);
+    virtual void resize_rect_object_handle(size_t handle_idx, int dx, int dy, int w, int h);
     bool try_get_resize_handle(int mouse_x, int mouse_y, int w, int h, size_t &handle_idx) const;
     std::array<SDL_FPoint, 8> get_resize_handles_px(int w, int h) const;
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_set>
 #include "objects/object.hpp"
+#include <math.h>
 
 #define MAX_DEPTH 5
 
