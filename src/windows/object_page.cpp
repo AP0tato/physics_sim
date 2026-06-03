@@ -16,11 +16,12 @@ constexpr int   page_btn_y   = 30;
 constexpr int   page_btn_gap = 14;
 
 constexpr float POPUP_W      = 320.0f;
-constexpr float POPUP_H_MASS = 200.0f;
-constexpr float POPUP_H_MIRR = 210.0f;
 constexpr float ROW_H        = 36.0f;
 constexpr float SLIDER_H     = 12.0f;
 constexpr float BTN_ROW_H    = 36.0f;
+constexpr float TITLE_H      = 36.0f;  // space for title text at top
+constexpr float CONTENT_PAD  = 12.0f;  // padding around content
+constexpr float BTN_PAD      = 12.0f;  // gap above confirm/cancel row
 
 int half_w(Window *w) { int W=0,H=0; if(w) w->get_size(W,H); return W>0?W/2:640; }
 int half_h(Window *w) { int W=0,H=0; if(w) w->get_size(W,H); return H>0?H/2:360; }
@@ -85,9 +86,11 @@ ObjectPage::ObjectPage(Window *main_window_ptr)
     }
     else if(ptr_light)
     {
-        add_btn(row(0), "Add Wall",   [this]{ create_and_add(ObjectType::PLANE);  });
-        add_btn(row(1), "Add Mass",   [this]{ open_popup(PendingType::MASS);      });
-        add_btn(row(2), "Add Mirror", [this]{ open_popup(PendingType::MIRROR);    });
+        add_btn(row(0), "Add Wall",        [this]{ create_and_add(ObjectType::WALL);                     });
+        add_btn(row(1), "Add Mirror",      [this]{ open_popup(PendingType::MIRROR);                      });
+        add_btn(row(2), "Add Light Source",[this]{ open_popup(PendingType::LIGHT_SOURCE);                });
+        add_btn(row(3), "Add Laser",       [this]{ create_and_add(ObjectType::LASER);                    });
+        add_btn(row(4), "Add Light Ray",   [this]{ create_and_add(ObjectType::LIGHT_RAY);                });
     }
 }
 
@@ -119,6 +122,7 @@ void ObjectPage::open_popup(PendingType type)
     mass_exponent      = 0;
     active_mass_slider = ActiveMassSlider::NONE;
     mirror_shape       = MirrorType::FLAT;
+    light_radial       = false;
 }
 
 void ObjectPage::close_popup()
@@ -142,6 +146,12 @@ void ObjectPage::confirm_and_place()
         if(ptr_light) ptr_light->add_object(obj);
         if(ptr_main)  ptr_main->add_object(obj);
     }
+    else if(pending_type == PendingType::LIGHT_SOURCE)
+    {
+        LightSource *obj = make_light_source();
+        obj->radial = light_radial;
+        if(ptr_light) ptr_light->add_object(obj);
+    }
     close_popup();
 }
 
@@ -151,7 +161,32 @@ ObjectPage::PopupLayout ObjectPage::build_layout(int w, int h) const
 {
     PopupLayout L{};
 
-    const float popup_h = (pending_type == PendingType::MIRROR) ? POPUP_H_MIRR : POPUP_H_MASS;
+    // ── Measure content height for this popup type ────────────────────────
+    float content_h = 0.0f;
+
+    if(pending_type == PendingType::MASS)
+    {
+        // title + label + slider + gap + label + slider + gap + result preview
+        content_h = TITLE_H
+                  + 18.f + SLIDER_H   // mantissa label + slider
+                  + ROW_H             // gap to next row
+                  + 18.f + SLIDER_H   // exponent label + slider
+                  + 28.f;             // result preview line
+    }
+    else if(pending_type == PendingType::MIRROR)
+    {
+        // title + option buttons row + hint line
+        content_h = TITLE_H + 40.f + 28.f;
+    }
+    else if(pending_type == PendingType::LIGHT_SOURCE)
+    {
+        // title + emission label + option buttons row + hint line
+        content_h = TITLE_H + 20.f + 40.f + 28.f;
+    }
+
+    // confirm / cancel row always at the bottom
+    const float popup_h = content_h + BTN_PAD + BTN_ROW_H + CONTENT_PAD;
+
     const float px = (float)w * 0.5f - POPUP_W * 0.5f;
     const float py = (float)h * 0.5f - popup_h * 0.5f;
 
@@ -172,8 +207,8 @@ ObjectPage::PopupLayout ObjectPage::build_layout(int w, int h) const
     L.mirror_concave = {px + 12.f + mbw + 6.f,   mby, mbw, 40.f};
     L.mirror_convex  = {px + 12.f + (mbw+6.f)*2.f, mby, mbw, 40.f};
 
-    // Confirm / Cancel at the bottom
-    const float btn_y = py + popup_h - BTN_ROW_H - 12.f;
+    // Confirm / Cancel — always pinned to bottom of panel
+    const float btn_y = py + popup_h - BTN_ROW_H - CONTENT_PAD;
     const float half  = (POPUP_W - 36.f) * 0.5f;
     L.confirm_btn = {px + 12.f,        btn_y, half, BTN_ROW_H - 4.f};
     L.cancel_btn  = {px + 24.f + half, btn_y, half, BTN_ROW_H - 4.f};
@@ -244,7 +279,35 @@ void ObjectPage::draw_popup(int w, int h)
                   L.mirror_flat.y + 48.f, {140, 180, 255, 255}, 12);
     }
 
-    // Confirm / Cancel
+    else if(pending_type == PendingType::LIGHT_SOURCE)
+    {
+        draw_text("Configure Light Source", L.panel.x + 12.f, L.panel.y + 10.f, tc, 14);
+
+        draw_text("Emission mode:", L.panel.x + 12.f, L.panel.y + 48.f, tc, 12);
+
+        // Two option buttons: Linear / Radial
+        const float mbw = (POPUP_W - 36.f) / 2.f;
+        const float mby = L.panel.y + 68.f;
+        SDL_FRect linear_btn  = {L.panel.x + 12.f,           mby, mbw, 40.f};
+        SDL_FRect radial_btn  = {L.panel.x + 18.f + mbw,     mby, mbw, 40.f};
+
+        auto draw_opt = [&](const SDL_FRect &rc, const char *label, bool selected)
+        {
+            fill_rect  (r, rc, selected?55:28, selected?85:28, selected?115:28);
+            stroke_rect(r, rc, selected?80:80, selected?170:100, selected?255:100);
+            draw_text(label,
+                      rc.x + rc.w*0.5f - (float)strlen(label)*3.5f,
+                      rc.y + rc.h*0.5f - 7.f, tc, 13);
+        };
+        draw_opt(linear_btn, "Linear", !light_radial);
+        draw_opt(radial_btn, "Radial",  light_radial);
+
+        const char *hint = light_radial
+            ? "Emits rays in all directions (bulb)"
+            : "Emits a flat sheet of parallel rays";
+        draw_text(hint, L.panel.x + 12.f, mby + 48.f, {140, 180, 255, 255}, 12);
+    }
+
     auto draw_action_btn = [&](const SDL_FRect &rc, const char *label,
                                uint8_t br, uint8_t bg, uint8_t bb)
     {
@@ -295,11 +358,24 @@ bool ObjectPage::handle_popup_click(int mx, int my, int w, int h)
         if(hit(L.mirror_convex,  mx, my)) { mirror_shape = MirrorType::CONVEX;  return true; }
     }
 
+    if(pending_type == PendingType::LIGHT_SOURCE)
+    {
+        const float mbw = (POPUP_W - 36.f) / 2.f;
+        const float mby = L.panel.y + 68.f;
+        SDL_FRect linear_btn = {L.panel.x + 12.f,       mby, mbw, 40.f};
+        SDL_FRect radial_btn = {L.panel.x + 18.f + mbw, mby, mbw, 40.f};
+        if(hit(linear_btn, mx, my)) { light_radial = false; return true; }
+        if(hit(radial_btn, mx, my)) { light_radial = true;  return true; }
+    }
+
     return true;
 }
 
 bool ObjectPage::handle_popup_motion(int mx, int my, int w, int h)
 {
+    (void)my;
+    (void)w;
+    (void)h;
     if(pending_type != PendingType::MASS) return false;
     auto L = build_layout(w, h);
 
@@ -374,7 +450,12 @@ void ObjectPage::create_and_add(ObjectType type)
     Object *obj = nullptr;
     if(type == ObjectType::SPRING) obj = make_spring();
     if(type == ObjectType::MASS)   obj = make_mass(1.0f);
-    if(type == ObjectType::PLANE)  obj = make_plane();
+    if(type == ObjectType::PLANE)      obj = make_plane();
+    if(type == ObjectType::WALL)       obj = make_wall();
+    if(type == ObjectType::MIRROR)     obj = make_mirror(MirrorType::FLAT);
+    if(type == ObjectType::LIGHT_SOURCE) obj = make_light_source();
+    if(type == ObjectType::LASER)      obj = make_laser();
+    if(type == ObjectType::LIGHT_RAY)  obj = make_light_ray();
     if(!obj) return;
     if(ptr_main)  ptr_main->add_object(obj);
     if(ptr_light) ptr_light->add_object(obj);
@@ -422,11 +503,38 @@ Mirror* ObjectPage::make_mirror(MirrorType shape)
                       {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}});
 }
 
-Plane* ObjectPage::make_wall()
+Wall* ObjectPage::make_wall()
 {
     int w=1920, h=1080;
     if(ptr_light) ptr_light->get_size(w,h);
     const float cx=w*0.5f, cy=h*0.5f, lw=200.f, th=20.f;
-    return new Plane({{cx-lw*0.5f,cy-th*0.5f},{cx+lw*0.5f,cy-th*0.5f},
-                      {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}}, true);
+    return new Wall({{cx-lw*0.5f,cy-th*0.5f},{cx+lw*0.5f,cy-th*0.5f},
+                     {cx+lw*0.5f,cy+th*0.5f},{cx-lw*0.5f,cy+th*0.5f}}, true);
+}
+
+LightSource* ObjectPage::make_light_source()
+{
+    int w=1920, h=1080;
+    if(ptr_light) ptr_light->get_size(w,h);
+    const float bw=24.f, bh=24.f;
+    const float x=w*0.5f-bw*0.5f, y=h*0.5f-bh*0.5f;
+    return new LightSource({{x,y},{x+bw,y},{x+bw,y+bh},{x,y+bh}});
+}
+
+Laser* ObjectPage::make_laser()
+{
+    int w=1920, h=1080;
+    if(ptr_light) ptr_light->get_size(w,h);
+    const float bw=90.f, bh=8.f;
+    const float x=w*0.5f-bw*0.5f, y=h*0.5f-bh*0.5f;
+    return new Laser({{x,y},{x+bw,y},{x+bw,y+bh},{x,y+bh}});
+}
+
+LightRay* ObjectPage::make_light_ray()
+{
+    int w=1920, h=1080;
+    if(ptr_light) ptr_light->get_size(w,h);
+    const float bw=140.f, bh=4.f;
+    const float x=w*0.5f-bw*0.5f, y=h*0.5f-bh*0.5f;
+    return new LightRay({{x,y},{x+bw,y},{x+bw,y+bh},{x,y+bh}});
 }

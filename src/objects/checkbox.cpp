@@ -62,7 +62,7 @@ CheckBox::CheckBox(int x, int y, int size, bool checked, std::function<void(bool
     
 }
 
-CheckBox::CheckBox(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation, bool checked)
+CheckBox::CheckBox(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation, bool checked)
     : Object(corners, hitbox_type, orientation), x(0), y(0), size(16), checked(checked), on_toggle(nullptr)
 {
 }

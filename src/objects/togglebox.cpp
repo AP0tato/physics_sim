@@ -54,7 +54,7 @@ namespace
     }
 }
 
-ToggleBox::ToggleBox(const std::vector<std::array<float,2>> &corners,
+ToggleBox::ToggleBox(const std::vector<std::vector<float>> &corners,
                      HitboxType hitbox_type,
                      Orientation orientation,
                      const std::vector<std::string> &values,

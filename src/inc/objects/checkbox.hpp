@@ -11,7 +11,7 @@ class CheckBox : public Object
 {
     public:
     CheckBox(int x, int y, int size, bool checked, std::function<void(bool)> on_toggle = {});
-    CheckBox(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation, bool checked = false);
+    CheckBox(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation, bool checked = false);
 
     void set_position(int x, int y);
     void set_size(int size);

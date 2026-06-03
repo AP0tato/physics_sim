@@ -10,22 +10,26 @@
 
 enum class HitboxType { RECTANGLE, ELLIPSE, SPECIAL };
 enum class Orientation { UP, RIGHT, DOWN, LEFT, NONE };
-enum class ObjectType { SPRING, MASS, BUTTON, PLANE, LIGHT_SOURCE, WALL, MIRROR, SLIDER, CHECKBOX, TEXTFIELD, TOGGLEBOX };
+enum class ObjectType { SPRING, MASS, BUTTON, PLANE, LIGHT_SOURCE, WALL, MIRROR, LASER, LIGHT_RAY, SLIDER, CHECKBOX, TEXTFIELD, TOGGLEBOX };
 
 class Object
 {
     public:
-    std::vector<std::array<float,2>> corners;
-    std::vector<std::array<float,2>> base_shape;
-    std::vector<std::array<float,4>> hitbox; // 2D: for RECTANGLE -> 4 entries {x,y,0,0}; for ELLIPSE -> 1 entry {cx,cy,rx,ry}
+    std::vector<std::vector<float>>           corners;
+    std::vector<std::vector<float>>           base_shape;
+
+    // For RECTANGLE / SPECIAL: hitbox mirrors corners — each entry is a vertex
+    // {x, y, z} so edge iteration works directly on hitbox.
+    // For ELLIPSE: exactly 2 entries — hitbox[0] = {cx, cy, 0},
+    //                                   hitbox[1] = {rx, ry, 0}.
+    std::vector<std::array<float, 3>>         hitbox{{std::array<float, 3>{0.0f, 0.0f, 0.0f}, std::array<float, 3>{0.0f, 0.0f, 0.0f}}};
+
     HitboxType                       hitbox_type;
     Orientation                      orientation;
-    float                            velocity_x;
-    float                            velocity_y;
     bool                             anchor;
 
     Object() = default;
-    Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation);
+    Object(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation);
 
     bool is_mouse_click(int x, int y, int w, int h);
     virtual void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h);

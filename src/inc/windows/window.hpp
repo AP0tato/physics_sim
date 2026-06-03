@@ -11,6 +11,7 @@
 #include "color.hpp"
 #include "themes.hpp"
 #include "objects/object.hpp"
+#include "objects/physicsobject.hpp"
 
 // Forward declaration so Window can hold the global window list
 // without a circular include. Defined in app_state.hpp / main.cpp.
@@ -50,6 +51,8 @@ public:
     std::vector<Object*> objects;
 
 protected:
+    virtual void on_physics_object_double_click(PhysicsObject *object, size_t index, SDL_Event &event);
+
     // Returns a cached font at the requested size.
     // Searches the standard platform font paths.
     static TTF_Font *get_font(int size);

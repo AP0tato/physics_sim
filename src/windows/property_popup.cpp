@@ -3,6 +3,7 @@
 #include "objects/checkbox.hpp"
 #include "objects/textfield.hpp"
 #include "objects/togglebox.hpp"
+#include "objects/button.hpp"
 
 namespace
 {
@@ -83,6 +84,12 @@ void PropertyPopup::load(const Object* obj, std::vector<Object*> options, int w,
         else if(ToggleBox* togglebox = dynamic_cast<ToggleBox*>(options[i])) {
             togglebox->on_property_popup_load(content_left, current_y, content_width, property_popup_elem_height);
         }
+        else if(Button* btn = dynamic_cast<Button*>(options[i])) {
+            btn->x = (int)content_left;
+            btn->y = (int)current_y;
+            btn->w = (int)content_width;
+            btn->h = (int)property_popup_elem_height;
+        }
         
         current_y += property_popup_elem_height + property_popup_padding;
     }
@@ -123,6 +130,21 @@ bool PropertyPopup::handle_event(SDL_Event &event)
                 if(togglebox->handle_mouse_down(event.button.x, event.button.y))
                     return true;
             }
+            else if(Button *btn = dynamic_cast<Button*>(option))
+            {
+                if(event.button.x >= btn->x && event.button.x <= btn->x + btn->w &&
+                   event.button.y >= btn->y && event.button.y <= btn->y + btn->h)
+                {
+                    btn->press();
+                    return true;
+                }
+            }
+            else if(TextField *tf = dynamic_cast<TextField*>(option))
+            {
+                bool hit = tf->hit_test(event.button.x, event.button.y);
+                tf->set_active(hit);
+                if(hit) return true;
+            }
         }
         return true;
     }
@@ -150,6 +172,39 @@ bool PropertyPopup::handle_event(SDL_Event &event)
             }
         }
         return handled;
+    }
+
+    if(event.type == SDL_EVENT_TEXT_INPUT)
+    {
+        for(Object *option : options)
+        {
+            if(TextField *tf = dynamic_cast<TextField*>(option))
+            {
+                if(tf->is_active())
+                {
+                    for(const char *c = event.text.text; *c; ++c)
+                        tf->append_char(*c);
+                    return true;
+                }
+            }
+        }
+    }
+
+    if(event.type == SDL_EVENT_KEY_DOWN)
+    {
+        for(Object *option : options)
+        {
+            if(TextField *tf = dynamic_cast<TextField*>(option))
+            {
+                if(tf->is_active())
+                {
+                    if(event.key.key == SDLK_BACKSPACE)      { tf->backspace(); return true; }
+                    if(event.key.key == SDLK_RETURN ||
+                       event.key.key == SDLK_KP_ENTER)       { tf->commit(); tf->set_active(false); return true; }
+                    if(event.key.key == SDLK_ESCAPE)         { tf->set_active(false); return true; }
+                }
+            }
+        }
     }
 
     return false;

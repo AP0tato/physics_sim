@@ -1,6 +1,6 @@
 #include "objects/textfield.hpp"
 
-TextField::TextField(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation, const std::string &value)
+TextField::TextField(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation, const std::string &value)
     : Object(corners, hitbox_type, orientation), value(value), active(false), panel({0, 0, 0, 0})
 {
 }

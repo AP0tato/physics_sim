@@ -4,11 +4,15 @@
 #include "windows/window.hpp"
 #include "windows/property_popup.hpp"
 #include "objects/object.hpp"
+#include "objects/physicsobject.hpp"
 #include "objects/spring.hpp"
 #include "objects/mass.hpp"
 #include "objects/plane.hpp"
 #include "objects/button.hpp"
 #include "objects/checkbox.hpp"
+#include "objects/light.hpp"
+#include "objects/mirror.hpp"
+#include "objects/laser.hpp"
 
 #include <string>
 #include <vector>
@@ -25,10 +29,14 @@ public:
 
     void add_object(Object *object);
     void toggle_playing();
+    bool is_playing() const { return playing; }
 
     void main_loop()                   override;
     void event_handler(SDL_Event &ev)  override;
     void check_collisions();
+
+protected:
+    void on_physics_object_double_click(PhysicsObject *object, size_t index, SDL_Event &event) override;
 
 private:
     // ── Editor / playback state ───────────────────────────────────────────
@@ -48,17 +56,21 @@ private:
     std::vector<Window*>       child_windows;
 
     // ── Scene ─────────────────────────────────────────────────────────────
+    std::vector<PhysicsObject*> physics_objects;
     std::unordered_set<size_t> masses;
     std::unordered_set<size_t> buttons;
     std::unordered_set<size_t> planes;
     std::unordered_set<size_t> springs;
 
     // ── UI widgets ────────────────────────────────────────────────────────
-    Button                  *play_button       = nullptr;
+    Button                  *menu_button       = nullptr;
     PropertyPopup           *property_popup    = nullptr;
     std::vector<Object*>     property_spring;
     std::vector<Object*>     property_mass;
     std::vector<Object*>     property_plane;
+    std::vector<Object*>     property_light;
+    std::vector<Object*>     property_mirror;
+    std::vector<Object*>     property_laser;
 
     // ── Interaction state ─────────────────────────────────────────────────
     bool         playing           = false;
@@ -88,7 +100,7 @@ private:
     void restore_runtime_snapshot();
 
     // Physics step — does NOT draw; caller draws separately
-    void step_gravity(Object *object);
+    void step_gravity(PhysicsObject *object);
 };
 
 #endif // MAIN_WINDOW_HPP

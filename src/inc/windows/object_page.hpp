@@ -7,6 +7,10 @@
 #include "objects/mass.hpp"
 #include "objects/plane.hpp"
 #include "objects/mirror.hpp"
+#include "objects/light.hpp"
+#include "objects/wall.hpp"
+#include "objects/laser.hpp"
+#include "objects/lightray.hpp"
 
 #define BTN_WIDTH  180
 #define BTN_HEIGHT 56
@@ -15,7 +19,7 @@ class MainWindow;
 class LightWindow;
 
 // Which object is being configured before placement
-enum class PendingType { NONE, MASS, MIRROR };
+enum class PendingType { NONE, MASS, MIRROR, LIGHT_SOURCE };
 
 class ObjectPage : public Window
 {
@@ -45,6 +49,9 @@ private:
 
     // Mirror config (shown for MIRROR pending)
     MirrorType mirror_shape   = MirrorType::FLAT;
+
+    // Light source config (shown for LIGHT_SOURCE pending)
+    bool        light_radial  = false;   // false = linear, true = radial
 
     // ── Object placement ──────────────────────────────────────────────────
     void open_popup(PendingType type);
@@ -77,8 +84,11 @@ private:
     Spring* make_spring();
     Mass*   make_mass(float value);           // value = mantissa × 10^exponent
     Plane*  make_plane();
-    Plane*  make_wall();
+    Wall*   make_wall();
     Mirror*  make_mirror(MirrorType shape);
+    LightSource* make_light_source();
+    Laser* make_laser();
+    LightRay* make_light_ray();
 };
 
 #endif // OBJECT_PAGE_HPP

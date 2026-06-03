@@ -1,8 +1,16 @@
 #include "windows/main_window.hpp"
 #include "windows/object_page.hpp"
+#include "windows/object_list_window.hpp"
+#include "objects/hamburger_button.hpp"
 #include "objects/slider.hpp"
 #include "objects/checkbox.hpp"
 #include "objects/togglebox.hpp"
+#include "objects/physicsobject.hpp"
+#include "objects/light.hpp"
+#include "objects/mirror.hpp"
+#include "objects/laser.hpp"
+#include "objects/button.hpp"
+#include "objects/textfield.hpp"
 
 #include <array>
 #include <algorithm>
@@ -32,11 +40,11 @@ const char *orientation_text(Orientation o)
 MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080, theme)
 {
     int w, h; get_size(w, h);
-    play_button = new Button(w-320, 10, 150, 50, "Play", [this](){ toggle_playing(); });
+    menu_button = new HamburgerButton(10, 10, 50, 50, [this](){ child_windows.push_back(new ObjectListWindow(this)); });
     property_popup = new PropertyPopup(theme);
     
     // Initialize property_spring: k(mantissa+exp), mass(mantissa+exp), massless, anchor, rededge
-    std::vector<std::array<float,2>> dummy_corners = {{0,0}, {1,0}, {1,1}, {0,1}};
+    std::vector<std::vector<float>> dummy_corners = {{0,0}, {1,0}, {1,1}, {0,1}};
     Slider* spring_k_mantissa_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 9.99f, 2.5f);
     Slider* spring_k_exponent_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 4.0f, 1.0f);
     Slider* spring_mass_mantissa_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 9.99f, 1.0f);
@@ -86,8 +94,29 @@ MainWindow::MainWindow(Theme *theme) : Window("Physics Sim", 1920, 1080, theme)
     plane_rotation->set_label("rotation");
     property_plane.push_back(plane_rotation);
     
-    add_object(play_button);
-    add_object(new Button(w-160, 10, 150, 50, "Object Page", [this](){ child_windows.push_back(new ObjectPage(this)); }));
+    // Initialize property_light: strength slider + strength text field
+    Slider* light_strength_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 1.0f, 512.0f, 8.0f);
+    light_strength_slider->set_label("rays (strength)");
+    property_light.push_back(light_strength_slider);
+
+    TextField* light_strength_field = new TextField(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, "8");
+    light_strength_field->set_label("exact count");
+    property_light.push_back(light_strength_field);
+
+    // Initialize property_mirror: concavity slider
+    Slider* mirror_concavity_slider = new Slider(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, 0.0f, 1.0f, 0.5f);
+    mirror_concavity_slider->set_label("concavity");
+    property_mirror.push_back(mirror_concavity_slider);
+
+    // Initialize property_laser: hex color text field + color picker button (stub)
+    TextField* laser_color_field = new TextField(dummy_corners, HitboxType::RECTANGLE, Orientation::NONE, "FF3232");
+    laser_color_field->set_label("hex color");
+    property_laser.push_back(laser_color_field);
+
+    Button* laser_color_picker_btn = new Button(0, 0, 0, 0, "Pick Color", [](){/* TODO: open color picker */});
+    property_laser.push_back(laser_color_picker_btn);
+
+    add_object(menu_button);
 }
 
 MainWindow::~MainWindow() { 
@@ -95,22 +124,28 @@ MainWindow::~MainWindow() {
     for(Object *o : property_spring) delete o;
     for(Object *o : property_mass) delete o;
     for(Object *o : property_plane) delete o;
+    for(Object *o : property_light) delete o;
+    for(Object *o : property_mirror) delete o;
+    for(Object *o : property_laser) delete o;
     for(Window *w : child_windows) delete w; 
     for(Object *o : objects) delete o; 
 }
 
-void MainWindow::step_gravity(Object *obj)
+void MainWindow::step_gravity(PhysicsObject *obj)
 {
-    obj->velocity_y += (float)(G * DELTA_T);
-    const float disp = obj->velocity_y * DELTA_T;
+    obj->velocity[1] += (float)(G * DELTA_T);
+    const float disp = obj->velocity[1] * DELTA_T;
     for(size_t j=0; j<obj->corners.size(); j++) { obj->corners[j][1] += disp; obj->base_shape[j][1] += disp; }
-    float sx, sy; if(obj->constrain_object_to_window(sx, sy)) if(std::fabs(sy) > 1e-6f) obj->velocity_y = -obj->velocity_y;
+    float sx, sy; if(obj->constrain_object_to_window(sx, sy)) if(std::fabs(sy) > 1e-6f) obj->velocity[1] = -obj->velocity[1];
     obj->create_hitbox();
 }
 
 void MainWindow::add_object(Object *object)
 {
     const size_t idx = Window::add_object(object) - 1;
+
+    if(auto *physics_object = dynamic_cast<PhysicsObject*>(object))
+        physics_objects.push_back(physics_object);
 
     switch (object->type())
     {
@@ -140,7 +175,6 @@ void MainWindow::toggle_playing()
 {
     playing = !playing; animating = playing;
     if(!playing) { dragging = resizing = has_selection = show_property_popup = false; }
-    if(play_button) play_button->label.set_text(playing ? "Stop" : "Play");
 }
 
 void MainWindow::main_loop()
@@ -148,7 +182,9 @@ void MainWindow::main_loop()
     int w, h; get_size(w, h);
     if(playing && animating) 
     {
-        for(size_t i=0; i<objects.size(); i++) if(!buttons.count(i) && !objects[i]->anchor) step_gravity(objects[i]);
+        for(PhysicsObject *physics_object : physics_objects)
+            if(physics_object && !physics_object->anchor)
+                step_gravity(physics_object);
     }
 
     for(size_t i=0; i<objects.size(); i++) 
@@ -360,6 +396,94 @@ void MainWindow::main_loop()
                 property_popup->load(objects[curr_object], property_plane, w, h);
                 property_popup->draw(get_renderer());
             }
+            else if(auto *ls = dynamic_cast<LightSource2D*>(objects[curr_object]))
+            {
+                if(property_light.size() >= 2)
+                {
+                    auto *strength_slider = dynamic_cast<Slider*>(property_light[0]);
+                    auto *strength_field  = dynamic_cast<TextField*>(property_light[1]);
+
+                    if(strength_slider)
+                    {
+                        strength_slider->set_value((float)ls->strength);
+                        strength_slider->set_on_change([ls, strength_field](float v){
+                            ls->strength = std::max(1, (int)std::round(v));
+                            if(strength_field)
+                                strength_field->set_value(std::to_string(ls->strength));
+                        });
+                    }
+                    if(strength_field)
+                    {
+                        strength_field->set_value(std::to_string(ls->strength));
+                        strength_field->set_on_commit([ls, strength_slider](const std::string &txt){
+                            try {
+                                int v = std::max(1, std::stoi(txt));
+                                ls->strength = v;
+                                if(strength_slider)
+                                    strength_slider->set_value((float)v);
+                            } catch(...) {}
+                        });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_light, w, h);
+                property_popup->draw(get_renderer());
+            }
+            else if(auto *mir = dynamic_cast<Mirror2D*>(objects[curr_object]))
+            {
+                if(property_mirror.size() >= 1)
+                {
+                    auto *concavity_slider = dynamic_cast<Slider*>(property_mirror[0]);
+                    if(concavity_slider)
+                    {
+                        concavity_slider->set_value(mir->concavity);
+                        concavity_slider->set_on_change([mir](float v){
+                            mir->concavity = v;
+                        });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_mirror, w, h);
+                property_popup->draw(get_renderer());
+            }
+            else if(auto *laser = dynamic_cast<Laser2D*>(objects[curr_object]))
+            {
+                if(property_laser.size() >= 2)
+                {
+                    auto *color_field = dynamic_cast<TextField*>(property_laser[0]);
+                    // property_laser[1] is the color picker button (stub)
+
+                    if(color_field)
+                    {
+                        color_field->set_value(laser->ray_color_hex);
+                        color_field->set_on_commit([laser, color_field](const std::string &txt){
+                            // Parse 6-digit hex, silently ignore bad input
+                            std::string hex = txt;
+                            if(hex.size() == 7 && hex[0] == '#') hex = hex.substr(1);
+                            if(hex.size() == 6)
+                            {
+                                auto hex2 = [](char hi, char lo) -> uint8_t {
+                                    auto v = [](char c) -> int {
+                                        return (c>='0'&&c<='9') ? c-'0' :
+                                               (c>='a'&&c<='f') ? c-'a'+10 :
+                                               (c>='A'&&c<='F') ? c-'A'+10 : 0;
+                                    };
+                                    return (uint8_t)(v(hi)*16 + v(lo));
+                                };
+                                laser->ray_color.r = hex2(hex[0], hex[1]);
+                                laser->ray_color.g = hex2(hex[2], hex[3]);
+                                laser->ray_color.b = hex2(hex[4], hex[5]);
+                                // Normalise stored hex to uppercase
+                                char buf[7];
+                                std::snprintf(buf, sizeof(buf), "%02X%02X%02X",
+                                    laser->ray_color.r, laser->ray_color.g, laser->ray_color.b);
+                                laser->ray_color_hex = buf;
+                                color_field->set_value(laser->ray_color_hex);
+                            }
+                        });
+                    }
+                }
+                property_popup->load(objects[curr_object], property_laser, w, h);
+                property_popup->draw(get_renderer());
+            }
         }
     }
     for(Window *cw : child_windows) { cw->clear_window(&cw->theme->background); cw->main_loop(); cw->render(); }
@@ -384,9 +508,13 @@ void MainWindow::event_handler(SDL_Event &event)
         if(event.key.key == SDLK_BACKSPACE && !playing && has_selection && curr_object < objects.size() && !buttons.count(curr_object))
         {
             const size_t deleted_idx = curr_object;
+            Object *deleted_object = objects[deleted_idx];
+            PhysicsObject *deleted_physics_object = dynamic_cast<PhysicsObject*>(deleted_object);
 
-            delete objects[deleted_idx];
+            delete deleted_object;
             objects.erase(objects.begin() + (long)deleted_idx);
+            if(deleted_physics_object)
+                physics_objects.erase(std::remove(physics_objects.begin(), physics_objects.end(), deleted_physics_object), physics_objects.end());
 
             auto reindex_set_after_delete = [deleted_idx](std::unordered_set<size_t> &indices)
             {
@@ -434,11 +562,11 @@ void MainWindow::event_handler(SDL_Event &event)
                 if(buttons.count(i)) { dynamic_cast<Button*>(objects[i])->press(); hit_any = true; break; }
                 hit_any = true; curr_object = i; has_selection = true;
                 
-                // CRITICAL FIX: Only show popup if it's a double-click (clicks >= 2)
-                show_property_popup = (event.button.clicks >= 2);
+                show_property_popup = false;
 
-                if(show_property_popup)
+                if(event.button.clicks >= 2)
                 {
+                    show_property_popup = true;
                     // Opening the popup cancels any object transformation.
                     dragging = false;
                     resizing = false;
@@ -463,5 +591,20 @@ void MainWindow::event_handler(SDL_Event &event)
         if(resizing) objects[curr_object]->resize_rect_object_handle(resize_handle, event.motion.x-(int)x_start, event.motion.y-(int)y_start, w, h);
         else objects[curr_object]->move_object_by_pixels(event.motion.x-(int)x_start, event.motion.y-(int)y_start, w, h);
         x_start = event.motion.x; y_start = event.motion.y;
+    }
+}
+
+void MainWindow::on_physics_object_double_click(PhysicsObject *object, size_t index, SDL_Event &event)
+{
+    (void)object;
+    (void)event;
+
+    if(index < objects.size())
+    {
+        curr_object = index;
+        has_selection = true;
+        show_property_popup = true;
+        dragging = false;
+        resizing = false;
     }
 }

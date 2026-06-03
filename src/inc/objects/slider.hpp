@@ -17,8 +17,8 @@ class Slider : public Object
     std::function<void(float)> on_change;
 
     public:
-    Slider(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation);
-    Slider(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation, float min_v, float max_v, float value);
+    Slider(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation);
+    Slider(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation, float min_v, float max_v, float value);
 
     virtual void draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h) override;
     void on_property_popup_load(float x, float y, float width, float height) override;

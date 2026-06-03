@@ -5,31 +5,29 @@ namespace
 {
     constexpr float selection_padding_px         = 10.0f;
     constexpr float selection_handle_size        = 9.0f;
-    constexpr int   selection_handle_pick_radius = 10;
+    // Handle hitbox is half the handle size + 5px extra on each side
+    constexpr int   selection_handle_pick_radius = (int)(selection_handle_size * 0.5f) + 5;
+    // Extra padding added around the object bounding box for drag hit-testing
+    constexpr float drag_hitbox_padding_px       = 10.0f;
 }
 
-Object::Object(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation)
+Object::Object(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation)
 {
     this->hitbox_type = hitbox_type;
     this->corners = corners;
     this->base_shape = corners;
     this->orientation = orientation;
-    this->velocity_x = 0.0f;
-    this->velocity_y = 0.0f;
     this->anchor = false;
     create_hitbox();
 }
 
 void Object::create_hitbox()
 {
-    // SPECIAL hitbox types are not handled here
-    if(hitbox_type == HitboxType::SPECIAL)
+    if(hitbox_type == HitboxType::ELLIPSE)
     {
-        std::cout << "Could not create object hitbox, implementation is missing\n";
-        return;
-    }
-    else if(hitbox_type == HitboxType::ELLIPSE)
-    {
+        // Ellipse hitbox layout: exactly 2 entries.
+        //   hitbox[0] = {cx, cy, 0}   — center
+        //   hitbox[1] = {rx, ry, 0}   — radii
         float c_x = 0, min_x = corners[0][0];
         float c_y = 0, min_y = corners[0][1];
         const int n = corners.size();
@@ -42,27 +40,24 @@ void Object::create_hitbox()
         }
         c_x /= n;
         c_y /= n;
-        float r_x = c_x - min_x;
-        float r_y = c_y - min_y;
-        // Ellipse hitbox layout as 2D: single element {center_x, center_y, radius_x, radius_y}
-        this->hitbox.clear();
-        this->hitbox.push_back({c_x, c_y, r_x, r_y});
+        this->hitbox.resize(2);
+        this->hitbox[0] = {c_x, c_y, 0.0f};
+        this->hitbox[1] = {c_x - min_x, c_y - min_y, 0.0f};
     }
     else
     {
-        // Rectangle hitbox layout as 2D: four corner entries [{x,y,0,0}, ...]
-        this->hitbox.clear();
+        // RECTANGLE and SPECIAL hitbox layout: one entry per corner,
+        // mirroring the corners array so edge iteration works directly.
+        // SPECIAL subclasses should call this base version if their
+        // corners are already set, or override create_hitbox() entirely.
         const size_t n = corners.size();
-        // If we have at least four corners use the first four, otherwise use all available
-        if(n >= 4)
+        this->hitbox.resize(n);
+        for(size_t i = 0; i < n; i++)
         {
-            for(size_t i = 0; i < 4; ++i)
-                this->hitbox.push_back({corners[i][0], corners[i][1], 0.0f, 0.0f});
-        }
-        else
-        {
-            for(size_t i = 0; i < n; ++i)
-                this->hitbox.push_back({corners[i][0], corners[i][1], 0.0f, 0.0f});
+            const size_t sz = corners[i].size();
+            this->hitbox[i][0] = sz > 0 ? corners[i][0] : 0.0f;
+            this->hitbox[i][1] = sz > 1 ? corners[i][1] : 0.0f;
+            this->hitbox[i][2] = sz > 2 ? corners[i][2] : 0.0f;
         }
     }
 }
@@ -71,27 +66,21 @@ bool Object::is_mouse_click(int x, int y, int w, int h)
 {
     if(this->hitbox_type == HitboxType::RECTANGLE)
     {
-        if(this->hitbox.empty()) return false;
-        float left = hitbox[0][0], top = hitbox[0][1], right = hitbox[0][0], bottom = hitbox[0][1];
-        for(const auto &p : hitbox)
-        {
-            if(p[0] < left) left = p[0];
-            if(p[0] > right) right = p[0];
-            if(p[1] < top) top = p[1];
-            if(p[1] > bottom) bottom = p[1];
-        }
-        return (x >= left * w && y >= top * h && x <= right * w && y <= bottom * h);
+        float left, top, right, bottom;
+        get_rect_bounds(left, top, right, bottom);
+        const float pad = drag_hitbox_padding_px;
+        return (x >= left * w - pad && y >= top * h - pad &&
+                x <= right * w + pad && y <= bottom * h + pad);
     }
     else if(this->hitbox_type == HitboxType::ELLIPSE)
     {
-        if(this->hitbox.empty()) return false;
-        const auto &e = this->hitbox[0];
-        if(e[2] == 0.0f || e[3] == 0.0f) return false;
+        if(hitbox[1][0] == 0.0f || hitbox[1][1] == 0.0f) return false;
 
-        const float cx = e[0] * w;
-        const float cy = e[1] * h;
-        const float rx = e[2] * w;
-        const float ry = e[3] * h;
+        const float cx = hitbox[0][0] * w;
+        const float cy = hitbox[0][1] * h;
+        // Inflate radii by the drag padding for a larger hit area
+        const float rx = hitbox[1][0] * w + drag_hitbox_padding_px;
+        const float ry = hitbox[1][1] * h + drag_hitbox_padding_px;
 
         return (
             ((x - cx) * (x - cx)) / (rx * rx) +
@@ -239,5 +228,9 @@ void Object::set_rect_from_bounds(float left, float top, float right, float bott
 
 void Object::on_property_popup_load(float x, float y, float width, float height)
 {
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
     // Base implementation (empty) - derived classes override as needed
 }

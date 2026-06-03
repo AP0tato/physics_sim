@@ -65,12 +65,12 @@ namespace
     }
 }
 
-Slider::Slider(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation)
+Slider::Slider(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation)
     : Object(corners, hitbox_type, orientation), slider({0, 0, 0, 0}), min_v(0.0f), max_v(100.0f), value(50.0f)
 {
 }
 
-Slider::Slider(const std::vector<std::array<float,2>> &corners, HitboxType hitbox_type, Orientation orientation, float min_v, float max_v, float value)
+Slider::Slider(const std::vector<std::vector<float>> &corners, HitboxType hitbox_type, Orientation orientation, float min_v, float max_v, float value)
     : Object(corners, hitbox_type, orientation), slider({0, 0, 0, 0}), min_v(min_v), max_v(max_v), value(value)
 {
 }

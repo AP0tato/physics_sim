@@ -3,19 +3,20 @@
 #include <utility>
 
 Button::Button(int x, int y, int w, int h, std::string text, std::function<void()> on_click)
-    : Object( std::vector<std::array<float,2>>{{(float)x, (float)y}, {(float)x+w, (float)y}, {(float)x+w, (float)y+h}, {(float)x, (float)y+h}}, HitboxType::RECTANGLE, Orientation::NONE)
-    , label(
-        text,
-        "assets/fonts/Roboto-Regular.ttf",
-        [&]() {
-            int font_size = h > 0 ? (h * 3) / 7 : 14;
-            if(font_size < 14)
-                font_size = 14;
-            if(font_size > 18)
-                font_size = 18;
-            return font_size;
-        }(),
-        SDL_Color{0, 0, 0, 255}
+    : Object( std::vector<std::vector<float>>{{(float)x, (float)y}, {(float)x+w, (float)y}, {(float)x+w, (float)y+h}, {(float)x, (float)y+h}}, HitboxType::RECTANGLE, Orientation::NONE)
+    , label(new DecoratedString(
+            text,
+            "assets/fonts/Roboto-Regular.ttf",
+            [&]() {
+                int font_size = h > 0 ? (h * 3) / 7 : 14;
+                if(font_size < 14)
+                    font_size = 14;
+                if(font_size > 18)
+                    font_size = 18;
+                return font_size;
+            }(),
+            SDL_Color{0, 0, 0, 255}
+        )
     )
 {
     this->x = x;
@@ -24,6 +25,11 @@ Button::Button(int x, int y, int w, int h, std::string text, std::function<void(
     this->h = h;
     this->anchor = true;
     this->on_press = std::move(on_click);
+}
+
+void Button::set_label(std::string str)
+{
+    this->label->set_text(str);
 }
 
 void Button::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
@@ -66,7 +72,7 @@ void Button::draw_object(SDL_Renderer *renderer, Theme *theme, int w, int h)
     SDL_SetRenderDrawColor(renderer, r, g, b, 255);
     SDL_RenderFillRect(renderer, &btn);
 
-    label.draw(renderer, this->x, this->y, this->w, this->h);
+    label->draw(renderer, this->x, this->y, this->w, this->h);
 }
 
 void Button::press()

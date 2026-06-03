@@ -39,7 +39,34 @@ void Window::event_handler(SDL_Event &event)
        event.window.windowID == SDL_GetWindowID(window))
     {
         running = false;
+        return;
     }
+
+    if(event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.clicks >= 2)
+    {
+        int w, h;
+        get_size(w, h);
+
+        for(size_t i = 0; i < objects.size(); ++i)
+        {
+            auto *physics_object = dynamic_cast<PhysicsObject*>(objects[i]);
+            if(!physics_object)
+                continue;
+
+            if(objects[i]->is_mouse_click(event.button.x, event.button.y, w, h))
+            {
+                on_physics_object_double_click(physics_object, i, event);
+                break;
+            }
+        }
+    }
+}
+
+void Window::on_physics_object_double_click(PhysicsObject *object, size_t index, SDL_Event &event)
+{
+    (void)object;
+    (void)index;
+    (void)event;
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────

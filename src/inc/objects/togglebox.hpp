@@ -16,7 +16,7 @@ class ToggleBox : public Object
     std::function<void(size_t, const std::string&)> on_change;
 
     public:
-    ToggleBox(const std::vector<std::array<float,2>> &corners,
+    ToggleBox(const std::vector<std::vector<float>> &corners,
               HitboxType hitbox_type,
               Orientation orientation,
               const std::vector<std::string> &values,

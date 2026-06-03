@@ -1,9 +1,22 @@
 #include "objects/mass.hpp"
 
-Mass::Mass(const std::vector<std::array<float,2>> &corners, HitboxType shape, float mass)
-    : Object(corners, shape, Orientation::NONE)
+// =============================================================================
+// Mass2D
+// =============================================================================
+Mass2D::Mass2D(const std::vector<std::vector<float>> &corners,
+               HitboxType shape, float mass)
+    : PhysicsObject2D(corners, shape, Orientation::NONE)
 {
     this->mass = mass;
-    this->velocity_x = 0.0f;
-    this->velocity_y = 0.0f;
+}
+
+// =============================================================================
+// Mass3D — skeleton
+// =============================================================================
+Mass3D::Mass3D(const std::vector<std::vector<float>> &corners,
+               HitboxType shape, float mass)
+    : PhysicsObject3D(corners, shape, Orientation::NONE)
+{
+    this->mass = mass;
+    // TODO: triangulate corners into faces for 3-D collision.
 }
